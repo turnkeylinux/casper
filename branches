@@ -1,0 +1,15 @@
+# Casper Bazaar Branches
+# https://code.launchpad.net/casper/+branches
+#
+# main          Mainline
+# trunk         Mainline development
+# edgy          Fixes for Edgy
+# casper+debian Debian Live casper branch
+
+BRANCHES=(
+        http://bazaar.launchpad.net/~mdz/casper/main
+        http://bazaar.launchpad.net/~ubuntu-core-dev/casper/trunk
+        http://bazaar.launchpad.net/~ubuntu-core-dev/casper/edgy
+	http://bazaar.launchpad.net/~marco-amadori/casper/casper+debian
+)
+
