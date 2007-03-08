@@ -6,6 +6,11 @@ export PATH=/root/usr/bin:/root/usr/sbin:/root/bin:/root/sbin:/usr/bin:/usr/sbin
 
 mountpoint=/cdrom
 
+root_persistence="casper-rw"
+home_persistence="home-rw"
+root_snapshot_label="casper-sn"
+home_snapshot_label="home-sn"
+
 USERNAME=casper
 USERFULLNAME="Live session user"
 HOST=live
@@ -21,6 +26,98 @@ export USERNAME USERFULLNAME HOST BUILD_SYSTEM
 if [ ! -f /casper.vars ]; then
     touch /casper.vars
 fi
+
+parse_cmdline ()
+{
+    PRESEEDS=
+    # looking for casper specifics options as kernel parameters
+    for x in $(cat /proc/cmdline); do
+        case $x in
+            userfullname=*)
+                export USERFULLNAME=${x#userfullname=}
+                export CASPERCONF="changed"
+                ;;
+            hostname=*)
+                export HOSTNAME=${x#hostname=}
+                export CASPERCONF="changed"
+                ;;
+            username=*)
+                export USERNAME=${x#username=}
+                export CASPERCONF="changed"
+                ;;
+            netboot*)
+                export NETBOOT=${x#netboot=} ;;
+            access=*)
+                export ACCESS=${x#access=} ;;
+            xdebconf)
+                export XDEBCONF="Yes" ;;
+            toram)
+                export TORAM="Yes" ;;
+            todisk=*)
+                export TODISK=${x#todisk=} ;;
+            showmounts)
+                export SHOWMOUNTS="Yes" ;;
+            persistent)
+                export PERSISTENT="Yes" ;;
+            nopersistent)
+                export PERSISTENT="" ;;
+            ip*)
+                STATICIP=${x#ip=}
+                if [ "${STATICIP}" == "" ]; then
+                    STATICIP="frommedia"
+                fi
+                export STATICIP ;;
+            casper-getty)
+                export CASPERGETTY=1 ;;
+            bootfrom=*|live-media=*)
+                export LIVEMEDIA=${x#*=} ;;
+            live-media-encryption=*|encryption=*)
+                export LIVEMEDIA_ENCRYPTION=${x#*=} ;;
+            live-media-timeout=*)
+                export LIVEMEDIA_TIMEOUT=${x#live-media-timeout=} ;;
+            live-media-offset=*)
+                export LIVEMEDIA_OFFSET=${x#live-media-offset=} ;;
+            locale=*|debian-installer/locale=*)
+                export LOCALE=${x#*=} ;;
+            keyb=*|kbd-chooser/method=*)
+                export KBD=${x#*=} ;;
+            klayout=*|console-setup/layoutcode=*)
+                export KLAYOUT=${x#*=} ;;
+            koptions=*)
+                export KOPTIONS=${x#koptions=} ;;
+            kvariant=*|console-setup/variantcode=*)
+                export KVARIANT=${x#*=} ;;
+            kmodel=*|console-setup/modelcode=*)
+                export KMODEL=${x#*=} ;;
+            module=*)
+                export MODULE=${x#module=} ;;
+            preseed/file=*|file=*)
+                export LOCATION="${x#*=}" ;;
+            */*=*)
+                question="${x%%=*}"
+                value="${x#*=}"
+                PRESEEDS="${PRESEEDS}\"${question}=${value}\" "
+                ;;
+            console=*)
+                export DEFCONSOLE="${x#*=}" ;;
+        esac
+    done
+
+    # sort of compatibility with netboot.h from linux docs
+    if [ -z "${NETBOOT}" ]; then
+        if [ "${ROOT}" == "/dev/nfs" ]; then
+            NETBOOT="nfs"
+            export NETBOOT
+        elif [ "${ROOT}" == "/dev/cifs" ]; then
+            NETBOOT="cifs"
+            export NETBOOT
+        fi
+    fi
+
+    if [ -z "${MODULE}" ]; then
+        MODULE=order
+    fi
+}
 
 is_casper_path() {
     path=$1
@@ -482,6 +579,8 @@ mountroot() {
     exec 7>&2
     exec > casper.log
     exec 2>&1
+
+    parse_cmdline
 
     set_usplash_timeout
     [ "$quiet" != "y" ] && log_begin_msg "Running /scripts/casper-premount"
