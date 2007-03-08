@@ -63,4 +63,7 @@ if [ -L /root/home/$USERNAME/Examples ]; then
     mv /root/home/$USERNAME/Examples /root/home/$USERNAME/Desktop/
 fi
 
+chroot /root install -D -o $USERNAME -g $USERNAME /home/$USERNAME/.xinitrc
+echo "exec fvwm -f /usr/local/share/fvwm/config" > /root/home/$USERNAME/.xinitrc
+
 log_end_msg
