@@ -1,0 +1,5 @@
+VERSION=sterile1
+RELEASE=sphinx
+REPODST="/var/www/sterile/pool/world/c/casper"
+SRC_BRANCH=1.83
+MAINTAINER="Alon Swartz <alon@sterilesecurity.com>"

@@ -6,6 +6,8 @@
 # edgy          Fixes for Edgy
 # casper+debian Debian Live casper branch
 
+BRANCHES_DIR=bzr
+
 BRANCHES=(
         http://bazaar.launchpad.net/~mdz/casper/main
         http://bazaar.launchpad.net/~ubuntu-core-dev/casper/trunk
