@@ -40,6 +40,17 @@ get_fstype() {
     /lib/udev/vol_id -t $1 2>/dev/null
 }
 
+is_supported_blockdev () {
+    blockdev="${1}"
+    fstype=$(get_fstype "${blockdev}")
+    case ${fstype} in
+        vfat|ext2|ext3) # FIXME: what about other filesystems?
+            return 0
+            ;;
+    esac
+    return 1
+}
+
 where_is_mounted() {
     device=$1
     if grep -q "^$device " /proc/mounts; then
@@ -155,7 +166,7 @@ find_cow_device() {
             if [ "$(/lib/udev/vol_id -l $devname 2>/dev/null)" = "${pers_label}" ]; then
                 echo "$devname"
                 return
-            elif [ "$(get_fstype ${devname})" = "vfat" ]; then # FIXME: all supported block devices should be scanned
+            elif is_supported_blockdev ${devname}; then
                 mkdir -p "${cow_backing}"
                 try_mount "${devname}" "${cow_backing}" "rw"
                 if [ -e "${cow_backing}/${pers_label}" ]; then
