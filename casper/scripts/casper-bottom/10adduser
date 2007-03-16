@@ -20,10 +20,12 @@ esac
 
 log_begin_msg "$DESCRIPTION"
 
+USERPASSWORD="8Ab05sVQ4LLps" # live
+
 # U6aMy0wojraho is just a blank password
 chroot /root debconf-communicate -fnoninteractive casper > /dev/null <<EOF
 set passwd/root-password-crypted *
-set passwd/user-password-crypted U6aMy0wojraho
+set passwd/user-password-crypted $USERPASSWORD
 set passwd/user-fullname $USERFULLNAME 
 set passwd/username $USERNAME
 set passwd/user-uid 999
