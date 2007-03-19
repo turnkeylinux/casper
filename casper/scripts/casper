@@ -458,6 +458,11 @@ setup_unionfs() {
         homecow=$(find_cow_device "${home_persistence}" )
         if [ -b "${homecow}" ]; then
             mount -t $(get_fstype "${homecow}") -o rw "${homecow}" "${rootmnt}/home"
+	    if [ -f ${rootmnt}/home/casper.conf ]; then
+		cp ${rootmnt}/home/casper.conf /etc/casper.conf
+		. /etc/casper.conf
+		export USERNAME USERFULLNAME USERPASSWORD HOST BUILD_SYSTEM
+	    fi
             export HOMEMOUNTED=1 # used to proper calculate free space in do_snap_copy()
         else
             [ "$quiet" != "y" ] && log_warning_msg "Unable to find the persistent home medium"
