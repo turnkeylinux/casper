@@ -436,41 +436,49 @@ setup_unionfs() {
     cowdevice="tmpfs"
     cow_fstype="tmpfs"
 
-    # Looking for "${root_persistence}" device or file
-    if [ -n "${PERSISTENT}" ]; then
-        cowprobe=$(find_cow_device "${root_persistence}")
-        if [ -b "${cowprobe}" ]; then
-            cowdevice=${cowprobe}
-            cow_fstype=$(get_fstype "${cowprobe}")
-        else
-            [ "$quiet" != "y" ] && log_warning_msg "Unable to find the persistent medium"
-        fi
-    fi
+#    # Looking for "${root_persistence}" device or file
+#    if [ -n "${PERSISTENT}" ]; then
+#        cowprobe=$(find_cow_device "${root_persistence}")
+#        if [ -b "${cowprobe}" ]; then
+#            cowdevice=${cowprobe}
+#            cow_fstype=$(get_fstype "${cowprobe}")
+#        else
+#            [ "$quiet" != "y" ] && log_warning_msg "Unable to find the persistent medium"
+#        fi
+#    fi
 
     mount ${cowdevice} -t ${cow_fstype} -o rw /cow || panic "Can not mount $cowdevice on /cow"
 
     mount -t unionfs -o dirs=/cow=rw:$rofsstring unionfs "$rootmnt" || panic "Unionfs mount failed"
 
-    # Adding other custom mounts
     if [ -n "${PERSISTENT}" ]; then
-        # directly mount /home
-        # FIXME: add a custom mounts configurable system
-        homecow=$(find_cow_device "${home_persistence}" )
-        if [ -b "${homecow}" ]; then
-            mount -t $(get_fstype "${homecow}") -o rw "${homecow}" "${rootmnt}/home"
-	    if [ -f ${rootmnt}/home/casper.conf ]; then
-		cp ${rootmnt}/home/casper.conf /etc/casper.conf
-		. /etc/casper.conf
-		export USERNAME USERFULLNAME USERPASSWORD HOST BUILD_SYSTEM
-	    fi
-            export HOMEMOUNTED=1 # used to proper calculate free space in do_snap_copy()
-        else
+	if mount_cow_device "${home_persistence}" "$rootmnt/home"; then
+	    . ${rootmnt}/home/casper.conf
+	    export USERNAME USERFULLNAME USERPASSWORD HOST BUILD_SYSTEM
+	else
             [ "$quiet" != "y" ] && log_warning_msg "Unable to find the persistent home medium"
-        fi
-        # Look for other snapshots to copy in
-        try_snap "${root_snapshot_label}" "${rootmnt}" "ROOT"
-        try_snap "${home_snapshot_label}" "${rootmnt}/home" "HOME"
+	fi
     fi
+
+#    # Adding other custom mounts
+#    if [ -n "${PERSISTENT}" ]; then
+#        # directly mount /home
+#        # FIXME: add a custom mounts configurable system
+#        homecow=$(find_cow_device "${home_persistence}" )
+#        if [ -b "${homecow}" ]; then
+#            mount -t $(get_fstype "${homecow}") -o rw "${homecow}" "${rootmnt}/home"
+#	    if [ -f ${rootmnt}/home/casper.conf ]; then
+#		. ${rootmnt}/home/casper.conf
+#		export USERNAME USERFULLNAME USERPASSWORD HOST BUILD_SYSTEM
+#	    fi
+#            export HOMEMOUNTED=1 # used to proper calculate free space in do_snap_copy()
+#        else
+#            [ "$quiet" != "y" ] && log_warning_msg "Unable to find the persistent home medium"
+#        fi
+#        # Look for other snapshots to copy in
+#        try_snap "${root_snapshot_label}" "${rootmnt}" "ROOT"
+#        try_snap "${home_snapshot_label}" "${rootmnt}/home" "HOME"
+#    fi
 
     if [ -n "${SHOWMOUNTS}" ]; then
         for d in ${rofslist}; do

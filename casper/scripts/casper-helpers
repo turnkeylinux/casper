@@ -157,9 +157,37 @@ try_mount ()
     fi
 }
 
+mount_cow_device() {
+    pers_label="${1}"
+    mount_point="${2}"
+    for sysblock in $(echo /sys/block/* | tr ' ' '\n' | grep -v loop); do
+        for dev in $(subdevices "${sysblock}"); do
+            devname=$(sys2dev "${dev}")
+            if [ "$(/lib/udev/vol_id -l $devname 2>/dev/null)" = "${pers_label}" ]; then
+		try_mount "${devname}" "${mount_point}" "rw"
+                #mount -t $(get_fstype "${devname}") -o rw "${devname}" "${mount_point}"
+                return 0
+            elif is_supported_blockdev ${devname}; then
+		devbasename=$(basename "${devname}")
+		cow_backing="${rootmnt}/media/${devbasename}"
+                mkdir -p "${cow_backing}"
+                try_mount "${devname}" "${cow_backing}" "rw"
+                if [ -e "${cow_backing}/${pers_label}" ]; then
+		    try_mount "${cow_backing}/${pers_label}" "${mount_point}" "loop"
+                    #echo $(setup_loop "${cow_backing}/${pers_label}" "loop" "/sys/block/loop*")
+                    return 0
+                else
+                    umount ${cow_backing}
+		    rmdir ${cow_backing}
+                fi
+            fi
+        done
+    done
+    return 1
+}
+
 find_cow_device() {
     pers_label="${1}"
-    cow_backing="/${pers_label}-backing"
     for sysblock in $(echo /sys/block/* | tr ' ' '\n' | grep -v loop); do
         for dev in $(subdevices "${sysblock}"); do
             devname=$(sys2dev "${dev}")
@@ -167,6 +195,8 @@ find_cow_device() {
                 echo "$devname"
                 return
             elif is_supported_blockdev ${devname}; then
+		devbasename=$(basename "${devname}")
+		cow_backing="${rootmnt}/media/${devbasename}"
                 mkdir -p "${cow_backing}"
                 try_mount "${devname}" "${cow_backing}" "rw"
                 if [ -e "${cow_backing}/${pers_label}" ]; then
@@ -174,6 +204,7 @@ find_cow_device() {
                     return 0
                 else
                     umount ${cow_backing}
+		    rmdir ${cow_backing}
                 fi
             fi
         done
