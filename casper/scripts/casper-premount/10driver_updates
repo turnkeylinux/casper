@@ -17,7 +17,7 @@ prereqs)
        ;;
 esac
 
-mountpoint=/cdrom
+mountpoint=/media/live
 
 is_updates_path() {
 	# Driver packages are stored in ubuntu-drivers/<kver>/

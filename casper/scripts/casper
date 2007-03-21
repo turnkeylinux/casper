@@ -4,7 +4,8 @@
 
 export PATH=/root/usr/bin:/root/usr/sbin:/root/bin:/root/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 
-mountpoint=/cdrom
+mountpoint=/media/live
+export mountpoint=$mountpoint
 
 root_persistence="casper-rw"
 home_persistence="home-rw"
