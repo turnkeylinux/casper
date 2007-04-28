@@ -1,4 +1,4 @@
-VERSION=sterile1
+VERSION=sterile2
 RELEASE=sphinx
 REPODST="/var/www/sterile/pool/world/c/casper"
 SRC_BRANCH=1.83

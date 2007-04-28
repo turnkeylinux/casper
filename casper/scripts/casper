@@ -7,10 +7,11 @@ export PATH=/root/usr/bin:/root/usr/sbin:/root/bin:/root/sbin:/usr/bin:/usr/sbin
 mountpoint=/media/live
 export mountpoint=$mountpoint
 
-root_persistence="casper-rw"
-home_persistence="home-rw"
-root_snapshot_label="casper-sn"
-home_snapshot_label="home-sn"
+persistence_conf="config.sterile"
+#root_persistence="casper-rw"
+#home_persistence="home-rw"
+#root_snapshot_label="casper-sn"
+#home_snapshot_label="home-sn"
 
 USERNAME=casper
 USERFULLNAME="Live session user"
@@ -434,8 +435,53 @@ setup_unionfs() {
     rofsstring=${rofsstring%:}
 
     mkdir -p /cow
-    cowdevice="tmpfs"
-    cow_fstype="tmpfs"
+    mount tmpfs -t tmpfs -o rw /cow || panic "Can not mount tmpfs on /cow"
+    mount -t unionfs -o dirs=/cow=rw:$rofsstring unionfs "$rootmnt" || panic "Unionfs mount failed"
+
+    if [ -n "${PERSISTENT}" ]; then
+	log_begin_msg "Persistent related tasks"
+	p_conf=$(probe_persistence "${persistence_conf}")
+	if [ ${p_conf} ]; then
+	    cat ${p_conf} | grep -v \# |
+	    while read p_label p_mountpoint p_type p_overlay; do
+		if [ ${p_label} ]; then
+		    p_device=$(probe_persistence "${p_label}")
+		    if [ ${p_device} ]; then
+			if [ "${p_overlay}" = "true" ]; then
+			    case ${p_type} in
+				loopback)
+				    cow_mountpoint="/cow_${p_label}"
+				    mkdir -p "${cow_mountpoint}"
+				    try_mount "${p_device}" "${cow_mountpoint}" "loop"
+				    ;;
+				*)
+				    log_warning_msg "Unknown type ${p_type} for ${p_device}"
+				    ;;
+			    esac
+			    mount -t unionfs -o dirs=${cow_mountpoint}=rw:$rofsstring unionfs "${rootmnt}${p_mountpoint}"
+			else
+			    case ${p_type} in
+				loopback)
+				    try_mount "${p_device}" "${rootmnt}${p_mountpoint}" "loop"
+				    ;;
+				*)
+				    log_warning_msg "Unknown type ${p_type} for ${p_device}"
+				    ;;
+			    esac
+			fi
+		    else
+			log_warning_msg "Unable to find the persistent device labeled ${p_label}"
+		    fi
+		fi
+	    done
+	    for p_device in $(echo /media/* | tr ' ' '\n' | grep -v live); do
+		mkdir -p "${rootmnt}${p_device}"
+		mount -o move "${p_device}" "${rootmnt}${p_device}"
+	    done
+	fi
+        log_end_msg
+    fi
+
 
 #    # Looking for "${root_persistence}" device or file
 #    if [ -n "${PERSISTENT}" ]; then
@@ -448,18 +494,18 @@ setup_unionfs() {
 #        fi
 #    fi
 
-    mount ${cowdevice} -t ${cow_fstype} -o rw /cow || panic "Can not mount $cowdevice on /cow"
+#    mount ${cowdevice} -t ${cow_fstype} -o rw /cow || panic "Can not mount $cowdevice on /cow"
 
-    mount -t unionfs -o dirs=/cow=rw:$rofsstring unionfs "$rootmnt" || panic "Unionfs mount failed"
+#    mount -t unionfs -o dirs=/cow=rw:$rofsstring unionfs "$rootmnt" || panic "Unionfs mount failed"
 
-    if [ -n "${PERSISTENT}" ]; then
-	if mount_cow_device "${home_persistence}" "$rootmnt/home"; then
-	    . ${rootmnt}/home/casper.conf
-	    export USERNAME USERFULLNAME USERPASSWORD HOST BUILD_SYSTEM
-	else
-            [ "$quiet" != "y" ] && log_warning_msg "Unable to find the persistent home medium"
-	fi
-    fi
+#    if [ -n "${PERSISTENT}" ]; then
+#	if mount_cow_device "${home_persistence}" "$rootmnt/home"; then
+#	    . ${rootmnt}/home/casper.conf
+#	    export USERNAME USERFULLNAME USERPASSWORD HOST BUILD_SYSTEM
+#	else
+#            [ "$quiet" != "y" ] && log_warning_msg "Unable to find the persistent home medium"
+#	fi
+#    fi
 
 #    # Adding other custom mounts
 #    if [ -n "${PERSISTENT}" ]; then
