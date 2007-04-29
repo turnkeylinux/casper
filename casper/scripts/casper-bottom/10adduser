@@ -20,6 +20,12 @@ esac
 
 log_begin_msg "$DESCRIPTION"
 
+USERNAME_TMP=$(cat /root/etc/passwd | grep "999" | cut -f1 -d ':')
+if [ ${USERNAME_TMP} ]; then
+    # user already exists (persistent overlay)
+    export USERNAME=$USERNAME_TMP
+else
+    # user doesn't exist (live or first time persistent overlay)
 chroot /root debconf-communicate -fnoninteractive casper > /dev/null <<EOF
 set passwd/root-password-crypted *
 set passwd/user-password-crypted $USERPASSWORD
@@ -39,6 +45,10 @@ set passwd/username
 set passwd/user-uid
 EOF
 
+fi
+
+
+
 if [ -f /root/etc/sudoers ]; then
     if [ "${BUILD_SYSTEM}" = "Ubuntu" ]; then
         grep -q '^%admin' /root/etc/sudoers && sed -i -e '/^%admin/s/ALL$/NOPASSWD: ALL/' /root/etc/sudoers || echo '%admin  ALL=(ALL) NOPASSWD: ALL' >> /root/etc/sudoers
@@ -48,18 +58,18 @@ if [ -f /root/etc/sudoers ]; then
 fi
 
 # XXX - awful hack to stop xscreensaver locking the screen (#7150)
-echo 'RUNNING_UNDER_GDM="yes"' >> /root/etc/environment
+#echo 'RUNNING_UNDER_GDM="yes"' >> /root/etc/environment
 
-for file in /usr/share/applications/ubiquity-gtkui.desktop /usr/share/applications/kde/ubiquity-kdeui.desktop; do
-    if [ -f "/root/$file" ]; then
-        chroot /root install -D -o $USERNAME -g $USERNAME $file /home/$USERNAME/Desktop/$(basename "$file")
-        break
-    fi
-done
+#for file in /usr/share/applications/ubiquity-gtkui.desktop /usr/share/applications/kde/ubiquity-kdeui.desktop; do
+#    if [ -f "/root/$file" ]; then
+#        chroot /root install -D -o $USERNAME -g $USERNAME $file /home/$USERNAME/Desktop/$(basename "$file")
+#        break
+#    fi
+#done
 
-if [ -L /root/home/$USERNAME/Examples ]; then
-    chroot /root install -o $USERNAME -g $USERNAME -d /home/$USERNAME/Desktop/
-    mv /root/home/$USERNAME/Examples /root/home/$USERNAME/Desktop/
-fi
+#if [ -L /root/home/$USERNAME/Examples ]; then
+#    chroot /root install -o $USERNAME -g $USERNAME -d /home/$USERNAME/Desktop/
+#    mv /root/home/$USERNAME/Examples /root/home/$USERNAME/Desktop/
+#fi
 
 log_end_msg

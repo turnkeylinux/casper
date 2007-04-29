@@ -7,7 +7,8 @@ export PATH=/root/usr/bin:/root/usr/sbin:/root/bin:/root/sbin:/usr/bin:/usr/sbin
 mountpoint=/media/live
 export mountpoint=$mountpoint
 
-persistence_conf="config.sterile"
+persistence_conf="persistence.conf"
+personalize_conf="personalize.conf"
 #root_persistence="casper-rw"
 #home_persistence="home-rw"
 #root_snapshot_label="casper-sn"
@@ -221,7 +222,6 @@ copy_live_to() {
 
     # begin copying..
     mkdir "${copyto}"
-    echo "mount -t ${fstype} ${mount_options} ${dev} ${copyto}"
     mount -t "${fstype}" ${mount_options} "${dev}" "${copyto}"
     cp -a ${copyfrom}/* ${copyto} # "cp -a" from busybox also copies hidden files
     umount ${copyfrom}
@@ -440,6 +440,14 @@ setup_unionfs() {
 
     if [ -n "${PERSISTENT}" ]; then
 	log_begin_msg "Persistent related tasks"
+
+	p_personalize=$(probe_persistence "${personalize_conf}")
+	if [ ${p_personalize} ]; then
+	    . ${p_personalize}
+	    # USERPASSWORD will be equivalent to live user
+	    export USERNAME USERFULLNAME HOST
+	fi
+
 	p_conf=$(probe_persistence "${persistence_conf}")
 	if [ ${p_conf} ]; then
 	    cat ${p_conf} | grep -v \# |
