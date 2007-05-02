@@ -73,3 +73,9 @@ if [ -e /etc/casper.conf ]; then
     mkdir -p ${DESTDIR}/etc
     cp /etc/casper.conf ${DESTDIR}/etc
 fi
+
+if [ -e /etc/pdevs.key ]; then
+    mkdir -p ${DESTDIR}/etc
+    cp /etc/pdevs.key ${DESTDIR}/etc
+fi
+
