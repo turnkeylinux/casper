@@ -7,18 +7,6 @@ export PATH=/root/usr/bin:/root/usr/sbin:/root/bin:/root/sbin:/usr/bin:/usr/sbin
 mountpoint=/media/live
 export mountpoint=$mountpoint
 
-persistence_conf="persistence.conf"
-personalize_conf="personalize.conf"
-#root_persistence="casper-rw"
-#home_persistence="home-rw"
-#root_snapshot_label="casper-sn"
-#home_snapshot_label="home-sn"
-
-USERNAME=casper
-USERFULLNAME="Live session user"
-HOST=live
-BUILD_SYSTEM=Custom
-
 mkdir -p $mountpoint
 
 [ -f /etc/casper.conf ] && . /etc/casper.conf
@@ -440,100 +428,37 @@ setup_unionfs() {
 
     if [ -n "${PERSISTENT}" ]; then
 	log_begin_msg "Persistent related tasks"
+	pdevs="pdevs"
+	pdevs_key="/etc/pdevs.key"
+	pdevs_mountp="/pdevs"
 
-	p_personalize=$(probe_persistence "${personalize_conf}")
-	if [ ${p_personalize} ]; then
-	    . ${p_personalize}
-	    # USERPASSWORD will be equivalent to live user
-	    export USERNAME USERFULLNAME HOST
-	fi
+	if [ -f "${pdevs_key}" ]; then
+	    pdevs_dev=$(probe_persistence "${pdevs}")
+	    if [ ${pdevs_dev} ]; then
+	        pdevs_map=$(crypto_open "${pdevs_dev}" "${pdevs_key}")
+		if [ ${pdevs_map} ]; then
+		    mkdir -p "${pdevs_mountp}"
+		    try_mount "/dev/mapper/${pdevs_map}" "${pdevs_mountp}" "ro"
 
-	p_conf=$(probe_persistence "${persistence_conf}")
-	if [ ${p_conf} ]; then
-	    cat ${p_conf} | grep -v \# |
-	    while read p_label p_mountpoint p_type p_overlay; do
-		if [ ${p_label} ]; then
-		    p_device=$(probe_persistence "${p_label}")
-		    if [ ${p_device} ]; then
-			if [ "${p_overlay}" = "true" ]; then
-			    case ${p_type} in
-				loopback)
-				    cow_mountpoint="/cow_${p_label}"
-				    mkdir -p "${cow_mountpoint}"
-				    try_mount "${p_device}" "${cow_mountpoint}" "loop"
-				    ;;
-				*)
-				    log_warning_msg "Unknown type ${p_type} for ${p_device}"
-				    ;;
-			    esac
-			    mount -t unionfs -o dirs=${cow_mountpoint}=rw:$rofsstring unionfs "${rootmnt}${p_mountpoint}"
-			else
-			    case ${p_type} in
-				loopback)
-				    try_mount "${p_device}" "${rootmnt}${p_mountpoint}" "loop"
-				    ;;
-				*)
-				    log_warning_msg "Unknown type ${p_type} for ${p_device}"
-				    ;;
-			    esac
-			fi
-		    else
-			log_warning_msg "Unable to find the persistent device labeled ${p_label}"
-		    fi
+		    personalize_conf="${pdevs_mountp}/personalize.conf"
+		    process_personalize_conf "${personalize_conf}"
+
+		    pdevs_conf="${pdevs_mountp}/pdevs.${PCOM}.conf"
+		    process_pdevs_conf "${pdevs_conf}"
+
+		    umount ${pdevs_mountp}
+		    crypto_close ${pdevs_dev}
+		    rmdir ${pdevs_mountp}
 		fi
-	    done
-	    for p_device in $(echo /media/* | tr ' ' '\n' | grep -v live); do
-		mkdir -p "${rootmnt}${p_device}"
-		mount -o move "${p_device}" "${rootmnt}${p_device}"
-	    done
+	    else
+		log_warning_msg "Unable to find pdevs loopback: ${pdevs}"
+	    fi
+	else
+	    log_warning_msg "Unable to find pdevs keyfile: ${pdevs_key}"
 	fi
         log_end_msg
     fi
 
-
-#    # Looking for "${root_persistence}" device or file
-#    if [ -n "${PERSISTENT}" ]; then
-#        cowprobe=$(find_cow_device "${root_persistence}")
-#        if [ -b "${cowprobe}" ]; then
-#            cowdevice=${cowprobe}
-#            cow_fstype=$(get_fstype "${cowprobe}")
-#        else
-#            [ "$quiet" != "y" ] && log_warning_msg "Unable to find the persistent medium"
-#        fi
-#    fi
-
-#    mount ${cowdevice} -t ${cow_fstype} -o rw /cow || panic "Can not mount $cowdevice on /cow"
-
-#    mount -t unionfs -o dirs=/cow=rw:$rofsstring unionfs "$rootmnt" || panic "Unionfs mount failed"
-
-#    if [ -n "${PERSISTENT}" ]; then
-#	if mount_cow_device "${home_persistence}" "$rootmnt/home"; then
-#	    . ${rootmnt}/home/casper.conf
-#	    export USERNAME USERFULLNAME USERPASSWORD HOST BUILD_SYSTEM
-#	else
-#            [ "$quiet" != "y" ] && log_warning_msg "Unable to find the persistent home medium"
-#	fi
-#    fi
-
-#    # Adding other custom mounts
-#    if [ -n "${PERSISTENT}" ]; then
-#        # directly mount /home
-#        # FIXME: add a custom mounts configurable system
-#        homecow=$(find_cow_device "${home_persistence}" )
-#        if [ -b "${homecow}" ]; then
-#            mount -t $(get_fstype "${homecow}") -o rw "${homecow}" "${rootmnt}/home"
-#	    if [ -f ${rootmnt}/home/casper.conf ]; then
-#		. ${rootmnt}/home/casper.conf
-#		export USERNAME USERFULLNAME USERPASSWORD HOST BUILD_SYSTEM
-#	    fi
-#            export HOMEMOUNTED=1 # used to proper calculate free space in do_snap_copy()
-#        else
-#            [ "$quiet" != "y" ] && log_warning_msg "Unable to find the persistent home medium"
-#        fi
-#        # Look for other snapshots to copy in
-#        try_snap "${root_snapshot_label}" "${rootmnt}" "ROOT"
-#        try_snap "${home_snapshot_label}" "${rootmnt}/home" "HOME"
-#    fi
 
     if [ -n "${SHOWMOUNTS}" ]; then
         for d in ${rofslist}; do

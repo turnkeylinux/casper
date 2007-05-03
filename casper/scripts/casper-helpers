@@ -143,6 +143,19 @@ setup_loop() {
     panic "No loop devices available"
 }
 
+remove_loop() {
+    local fspath=$1
+
+    for loopdev in "/dev/loop"*; do
+    	loop_fspath=$(losetup ${loopdev} | awk '{print $3}' | tr -d '()')
+	if [ "${loop_fspath}" = "${fspath}" ]; then
+	    losetup -d "${loopdev}"
+	    return 0
+	fi
+    done
+    return 1
+}
+
 try_mount ()
 {
     dev="${1}"
@@ -154,6 +167,103 @@ try_mount ()
         mount -o bind $(where_is_mounted ${dev}) ${mountp} || panic "Cannot bind-mount"
     else
         mount -t $(get_fstype "${dev}") -o "${opts}" "${dev}" "${mountp}" || panic "Cannot mount ${dev} on ${mountp}"
+    fi
+}
+
+crypto_open () {
+    crypto_dev="${1}"
+    crypto_key="${2}"
+
+    modprobe ${MP_QUIET} -b dm-crypt
+
+    crypto_loop=$(setup_loop "${crypto_dev}" "loop" "/sys/block/loop*")
+    crypto_map=$(basename "${crypto_dev}")
+
+    if /sbin/cryptsetup isLuks ${crypto_loop} > /dev/null 2>&1; then
+        if /sbin/cryptsetup -q luksOpen "${crypto_loop}" "${crypto_map}" --key-file="${crypto_key}" > /dev/null 2>&1; then
+	    echo "${crypto_map}"
+	    return 0
+	else
+	    log_warning_msg "Keyfile ${crypto_key} failed to open device ${crypto_dev}"
+	fi
+    else
+	log_warning_msg "Device ${crypto_dev} is not a Luks device"
+    fi
+    return 1
+}
+
+crypto_close () {
+    crypto_dev="${1}"
+    crypto_map=$(basename "${crypto_dev}")
+    /sbin/cryptsetup -q luksClose "${crypto_map}" > /dev/null 2>&1
+    remove_loop "${crypto_dev}"
+}
+
+
+process_personalize_conf () {
+    personalize_conf="${1}"
+    if [ ${personalize_conf} ]; then
+	. ${personalize_conf}
+	# USERPASSWORD will be equivalent to live user
+	export USERNAME USERFULLNAME HOST
+    else
+	log_warning_msg "Unable to find personalize configuration file: ${personalize_conf}"
+    fi
+}
+
+process_pdevs_conf () {
+    pdevs_conf="${1}"
+    if [ ${pdevs_conf} ]; then
+	cat ${pdevs_conf} | grep -v \# |
+	while read p_label p_mountp p_overlay p_crypto; do
+	    if [ ${p_label} ]; then
+		p_device=$(probe_persistence "${p_label}")
+		if [ ${p_device} ]; then
+		    if [ "${p_overlay}" = "true" ]; then
+			case ${p_crypto} in
+			    none)
+				cow_mountp="/cow_${p_label}"
+				mkdir -p "${cow_mountp}"
+				try_mount "${p_device}" "${cow_mountp}" "loop"
+				;;
+			    luks)
+				p_key="/pdevs/${p_label}.key"
+				p_map=$(crypto_open "${p_device}" "${p_key}")
+				cow_mountp="/cow_${p_label}"
+				mkdir -p "${cow_mountp}"
+				try_mount "/dev/mapper/${p_map}" "${cow_mountp}" "rw"
+				;;
+			    *)
+				log_warning_msg "Unknown crypto ${p_crypto} for ${p_device}"
+				;;
+			esac
+			mount -t unionfs -o dirs=${cow_mountp}=rw:$rofsstring unionfs "${rootmnt}${p_mountp}"
+		    else
+			case ${p_crypto} in
+			    none)
+				try_mount "${p_device}" "${rootmnt}${p_mountp}" "loop"
+				;;
+			    luks)
+				p_key="/pdevs/${p_label}.key"
+				p_map=$(crypto_open "${p_device}" "${p_key}")
+				try_mount "/dev/mapper/${p_map}" "${rootmnt}${p_mountp}" "rw"
+				;;
+			    *)
+				log_warning_msg "Unknown crypto ${p_crypto} for ${p_device}"
+				;;
+			esac
+		    fi
+		else
+		    log_warning_msg "Unable to find the persistent device labeled ${p_label}"
+		fi
+	    fi
+	done
+	for cow_backing in $(echo /media/* | tr ' ' '\n' | grep -v live); do
+	    mkdir -p "${rootmnt}${cow_backing}"
+	    mount -o move "${cow_backing}" "${rootmnt}${cow_backing}"
+	done
+    else
+	log_warning_msg "Unable to find pdevs_conf: ${pdevs_conf}"
     fi
 }
 
@@ -182,35 +292,6 @@ probe_persistence() {
 		    fi
 		fi
 
-            fi
-        done
-    done
-    return 1
-}
-
-mount_cow_device() {
-    pers_label="${1}"
-    mount_point="${2}"
-    for sysblock in $(echo /sys/block/* | tr ' ' '\n' | grep -v loop); do
-        for dev in $(subdevices "${sysblock}"); do
-            devname=$(sys2dev "${dev}")
-            if [ "$(/lib/udev/vol_id -l $devname 2>/dev/null)" = "${pers_label}" ]; then
-		try_mount "${devname}" "${mount_point}" "rw"
-                #mount -t $(get_fstype "${devname}") -o rw "${devname}" "${mount_point}"
-                return 0
-            elif is_supported_blockdev ${devname}; then
-		devbasename=$(basename "${devname}")
-		cow_backing="${rootmnt}/media/${devbasename}"
-                mkdir -p "${cow_backing}"
-                try_mount "${devname}" "${cow_backing}" "rw"
-                if [ -e "${cow_backing}/${pers_label}" ]; then
-		    try_mount "${cow_backing}/${pers_label}" "${mount_point}" "loop"
-                    #echo $(setup_loop "${cow_backing}/${pers_label}" "loop" "/sys/block/loop*")
-                    return 0
-                else
-                    umount ${cow_backing}
-		    rmdir ${cow_backing}
-                fi
             fi
         done
     done
