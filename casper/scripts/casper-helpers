@@ -269,7 +269,7 @@ process_pdevs_conf () {
 
 probe_persistence() {
     pers_label="${1}"
-    for sysblock in $(echo /sys/block/* | tr ' ' '\n' | grep -v loop); do
+    for sysblock in $(echo /sys/block/* | tr ' ' '\n' | grep -v loop | grep -v dm- ); do
         for dev in $(subdevices "${sysblock}"); do
             devname=$(sys2dev "${dev}")
             if is_supported_blockdev ${devname}; then
