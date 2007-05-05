@@ -182,6 +182,7 @@ crypto_open () {
 
     if /sbin/cryptsetup isLuks ${crypto_loop} > /dev/null 2>&1; then
 	crypto_open_cmd="/sbin/cryptsetup -q luksOpen ${crypto_loop} ${crypto_map}"
+	crypto_addkey_cmd="/sbin/cryptsetup -q luksAddKey ${crypto_loop} /etc/pdevs.key"
 
 	if ${crypto_open_cmd} --key-file="${crypto_key}" > /dev/null 2>&1; then
 	    if [ -e "/dev/mapper/${crypto_map}" ]; then
@@ -207,12 +208,27 @@ crypto_open () {
 
 		if [ $? -eq 0 ]; then
 		    if [ -e "/dev/mapper/${crypto_map}" ]; then
-			# todo: ASK USER, ADD KEY + DONT BOTHER
 			echo "Passphrase accepted" >&6
 			echo >&6
+			echo -n "Add embedded keyfile to ${crypto_map}? [y/N]: " >&6
+			read choice
+			if [ 'y' = "${choice}" ]; then
+			    echo "${passphrase}" | ${crypto_addkey_cmd}
+			    if [ $? -eq 0 ]; then
+				echo "Embedded keyfile added successfully" >&6
+			    else
+				echo "Error occured in adding embedded keyfile" >&6
+			    fi
+			else
+			    echo "Not adding embedded keyfile" >&6
+			fi
+			echo >&6
+			unset choice
+			unset passphrase
 			return 0
 		    else
 			log_warning_msg "cryptsetup: unknown error setting up device mapping"
+			unset passphrase
 			return 1
 		    fi
 		else
@@ -221,6 +237,7 @@ crypto_open () {
 		fi
 	    done
 	    echo "Maximum number of tries exceeded, skipping ${crypto_map}..." >&6
+	    echo >&6
 	fi
     else
 	log_warning_msg "Device ${crypto_dev} is not a Luks device"
