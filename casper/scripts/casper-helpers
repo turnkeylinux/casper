@@ -1,3 +1,4 @@
+#!/bin/sh
 ## Casper helper functions, used by casper on boot and by casper-snapshot
 
 if [ "${BUILD_SYSTEM}" = "Ubuntu" ]; then
@@ -172,19 +173,54 @@ try_mount ()
 
 crypto_open () {
     crypto_dev="${1}"
-    crypto_key="${2}"
+    crypto_map="${2}"
+    crypto_key="${3}"
 
     modprobe ${MP_QUIET} -b dm-crypt
 
     crypto_loop=$(setup_loop "${crypto_dev}" "loop" "/sys/block/loop*")
-    crypto_map=$(basename "${crypto_dev}")
 
     if /sbin/cryptsetup isLuks ${crypto_loop} > /dev/null 2>&1; then
-        if /sbin/cryptsetup -q luksOpen "${crypto_loop}" "${crypto_map}" --key-file="${crypto_key}" > /dev/null 2>&1; then
-	    echo "${crypto_map}"
-	    return 0
+	crypto_open_cmd="/sbin/cryptsetup -q luksOpen ${crypto_loop} ${crypto_map}"
+
+	if ${crypto_open_cmd} --key-file="${crypto_key}" > /dev/null 2>&1; then
+	    if [ -e "/dev/mapper/${crypto_map}" ]; then
+		return 0	    
+	    else
+		log_warning_msg "cryptsetup: unknown error setting up device mapping"
+		return 1
+	    fi
 	else
-	    log_warning_msg "Keyfile ${crypto_key} failed to open device ${crypto_dev}"
+#	    if [ -x "/sbin/usplash_write" -a -p /dev/.initramfs/usplash_outfifo ]; then
+#		/sbin/usplash_write "QUIT"
+#		# saftey sleep to make sure the vt switch happened correctly
+#		sleep 2
+#	    fi
+
+    	    count=0
+	    while [ $count -lt 3 ]; do
+		count=$(( $count + 1 ))
+		echo -n "Enter passphrase for ${crypto_map}: " >&6
+		read -s passphrase
+		echo >&6
+		echo "${passphrase}" | ${crypto_open_cmd}
+
+		if [ $? -eq 0 ]; then
+		    if [ -e "/dev/mapper/${crypto_map}" ]; then
+			# todo: ASK USER, ADD KEY + DONT BOTHER
+			echo "Passphrase accepted" >&6
+			echo >&6
+			return 0
+		    else
+			log_warning_msg "cryptsetup: unknown error setting up device mapping"
+			return 1
+		    fi
+		else
+		    echo "Passphrase declined" >&6
+		    echo >&6
+		fi
+	    done
+	    echo "Maximum number of tries exceeded, skipping ${crypto_map}..." >&6
 	fi
     else
 	log_warning_msg "Device ${crypto_dev} is not a Luks device"
@@ -228,7 +264,8 @@ process_pdevs_conf () {
 				;;
 			    luks)
 				p_key="/pdevs/${p_label}.key"
-				p_map=$(crypto_open "${p_device}" "${p_key}")
+				p_map=$(basename "${p_device}")
+				crypto_open "${p_device}" "${p_map}" "${p_key}"
 				cow_mountp="/cow_${p_label}"
 				mkdir -p "${cow_mountp}"
 				try_mount "/dev/mapper/${p_map}" "${cow_mountp}" "rw"
@@ -245,7 +282,8 @@ process_pdevs_conf () {
 				;;
 			    luks)
 				p_key="/pdevs/${p_label}.key"
-				p_map=$(crypto_open "${p_device}" "${p_key}")
+				p_map=$(basename "${p_device}")
+				crypto_open "${p_device}" "${p_map}" "${p_key}"
 				try_mount "/dev/mapper/${p_map}" "${rootmnt}${p_mountp}" "rw"
 				;;
 			    *)

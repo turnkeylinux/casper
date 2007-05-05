@@ -435,8 +435,8 @@ setup_unionfs() {
 	if [ -f "${pdevs_key}" ]; then
 	    pdevs_dev=$(probe_persistence "${pdevs}")
 	    if [ ${pdevs_dev} ]; then
-	        pdevs_map=$(crypto_open "${pdevs_dev}" "${pdevs_key}")
-		if [ ${pdevs_map} ]; then
+		pdevs_map=$(basename "${pdevs_dev}")
+	        if crypto_open "${pdevs_dev}" "${pdevs_map}" "${pdevs_key}"; then
 		    mkdir -p "${pdevs_mountp}"
 		    try_mount "/dev/mapper/${pdevs_map}" "${pdevs_mountp}" "ro"
 
