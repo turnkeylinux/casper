@@ -171,6 +171,35 @@ try_mount ()
     fi
 }
 
+is_splash () {
+    if pidof usplash > /dev/null; then
+	if [ -x /sbin/usplash_write ]; then
+	    return 0
+	fi
+    fi
+    return 1
+}
+
+msg_text () {
+    # will move to casper-functions when usplash ugraded and code fixed
+    if is_splash; then
+	# TEXT will not show up when "quiet" is specified on /proc/cmdline
+	# /sbin/usplash_write "TEXT $@"
+
+	# INPUTENTER in edgy release version is buggy, just hangs
+	# /sbin/usplash_write "INPUTENTER $@, press enter to continue"
+
+	# when we upgrade (can't now due to deps), i will fix this code
+	# in the meantime, using this workaround:
+	# buggy at cosmetic standpoint (CLEAR doesn't even help)
+
+	/sbin/usplash_write "INPUT $@, press enter to continue"
+	read nunya < /dev/.initramfs/usplash_outfifo
+    else
+	echo "$@" >&6
+    fi
+}
+
 crypto_open () {
     crypto_dev="${1}"
     crypto_map="${2}"
@@ -192,36 +221,46 @@ crypto_open () {
 		return 1
 	    fi
 	else
-#	    if [ -x "/sbin/usplash_write" -a -p /dev/.initramfs/usplash_outfifo ]; then
-#		/sbin/usplash_write "QUIT"
-#		# saftey sleep to make sure the vt switch happened correctly
-#		sleep 2
-#	    fi
-
     	    count=0
 	    while [ $count -lt 3 ]; do
 		count=$(( $count + 1 ))
-		echo -n "Enter passphrase for ${crypto_map}: " >&6
-		read -s passphrase
-		echo >&6
+
+		PROMPT_TEXT="Enter passphrase for ${crypto_map}: "
+		if is_splash; then
+		    /sbin/usplash_write "INPUTQUIET ${PROMPT_TEXT}"
+		    read passphrase < /dev/.initramfs/usplash_outfifo
+		else
+		    echo -n "${PROMPT_TEXT}" >&6
+		    read -s passphrase
+		    echo >&6
+		fi
 		echo "${passphrase}" | ${crypto_open_cmd}
 
 		if [ $? -eq 0 ]; then
 		    if [ -e "/dev/mapper/${crypto_map}" ]; then
-			echo "Passphrase accepted" >&6
+			msg_text "Passphrase accepted"
 			echo >&6
-			echo -n "Add embedded keyfile to ${crypto_map}? [y/N]: " >&6
-			read choice
-			if [ 'y' = "${choice}" ]; then
+
+			PROMPT_TEXT="Add embedded keyfile to ${crypto_map}? [y/N]: "
+			if is_splash; then
+			    /sbin/usplash_write "INPUT ${PROMPT_TEXT}"
+			    read choice < /dev/.initramfs/usplash_outfifo
+			else
+			    echo -n "${PROMPT_TEXT}" >&6
+			    read choice
+			fi
+
+			if [ "${choice}" = 'y' ]; then
 			    echo "${passphrase}" | ${crypto_addkey_cmd}
 			    if [ $? -eq 0 ]; then
-				echo "Embedded keyfile added successfully" >&6
+				msg_text "Embedded keyfile added successfully"
 			    else
-				echo "Error occured in adding embedded keyfile" >&6
+				msg_text "Error occured in adding embedded keyfile"
 			    fi
 			else
-			    echo "Not adding embedded keyfile" >&6
+			    msg_text "Not adding embedded keyfile"
 			fi
+
 			echo >&6
 			unset choice
 			unset passphrase
@@ -232,11 +271,11 @@ crypto_open () {
 			return 1
 		    fi
 		else
-		    echo "Passphrase declined" >&6
+		    msg_text "Passphrase declined"
 		    echo >&6
 		fi
 	    done
-	    echo "Maximum number of tries exceeded, skipping ${crypto_map}..." >&6
+	    msg_text "Maximum number of tries exceeded, skipping ${crypto_map}..."
 	    echo >&6
 	fi
     else
@@ -273,6 +312,7 @@ process_pdevs_conf () {
 		p_device=$(probe_persistence "${p_label}")
 		if [ ${p_device} ]; then
 		    if [ "${p_overlay}" = "true" ]; then
+			# why cow? copy-on-write, the overlay 'diff'
 			case ${p_crypto} in
 			    none)
 				cow_mountp="/cow_${p_label}"
