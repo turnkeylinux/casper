@@ -7,8 +7,8 @@
 # Should-Stop:       $local_fs
 # Default-Start:     1 2 3 4 5
 # Default-Stop:      0 6
-# Short-Description: Casper umount persistent home
-# Description:       Umount /home and its associative loopback device.
+# Short-Description: Casper umount pdevs
+# Description:       Umount pdevs mounted by casper
 ### END INIT INFO
 
 # Author: Alon Swartz <alon@sterilesecurity.com>
@@ -27,18 +27,39 @@ grep -qs boot=casper /proc/cmdline || exit 0
 # Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
 . /lib/lsb/init-functions
 
+remove_loop() {
+    local pdev="${1}"
+
+    for loopdev in "/dev/loop"*; do
+        loop_fspath=$(losetup ${loopdev} | awk '{print $3}' | tr -d '()')
+	loop_basename=$(basename "${loop_fspath}")
+	if [ "${loop_basename}" = "${pdev}" ]; then
+            losetup -d "${loopdev}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+crypto_close () {
+    crypto_dev="${1}"
+    crypto_map=$(basename "${crypto_dev}")
+    /sbin/cryptsetup -q luksClose "${crypto_map}" > /dev/null 2>&1
+    remove_loop "${crypto_map}"
+}
+
+#not very clever at present, but good enough for now
 do_stop ()
 {
-    if grep -qs persistent /proc/cmdline ; then
-        log_begin_msg "Unmounting persistent home and associative loopback device" 
+    log_begin_msg "Unmounting persistent devices" 
 
-        loopdev=$(grep " /home " /proc/mounts | awk '{ print $1 }')
-	umount -v -r -d /home
-        if [ -n "$loopdev" ]; then
-		losetup -d ${loopdev}
-	fi
-	log_action_end_msg $?
-    fi
+    cat /proc/mounts | grep /dev/mapper | \
+    while read DEV MOUNTP FSTYPE REST; do
+	umount ${MOUNTP}
+	crypto_close ${DEV}
+    done
+
+    log_action_end_msg $?
 }
 
 case "$1" in
@@ -49,7 +70,7 @@ case "$1" in
         do_stop
         ;;
     *)
-        log_success_msg "Usage: $SCRIPTNAME {start|stop|restart|force-reload}" >&2
+        log_success_msg "Usage: $SCRIPTNAME {stop}" >&2
         exit 3
         ;;
 esac
