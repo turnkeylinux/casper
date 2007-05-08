@@ -306,8 +306,9 @@ process_personalize_conf () {
 process_pdevs_conf () {
     pdevs_conf="${1}"
     if [ ${pdevs_conf} ]; then
+	#p_type is a placeholder
 	cat ${pdevs_conf} | grep -v \# |
-	while read p_label p_mountp p_overlay p_crypto; do
+	while read p_label p_mountp p_type p_overlay p_crypto; do
 	    if [ ${p_label} ]; then
 		p_device=$(probe_persistence "${p_label}")
 		if [ ${p_device} ]; then

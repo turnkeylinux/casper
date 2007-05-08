@@ -5,3 +5,5 @@ bin/casper-reconfigure		usr/share/casper
 bin/casper-snapshot		sbin
 hooks				usr/share/initramfs-tools
 scripts				usr/share/initramfs-tools
+debian/manpage/casper-pdevs.readme	etc/skel
+
