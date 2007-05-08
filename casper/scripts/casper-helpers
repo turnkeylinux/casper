@@ -211,7 +211,7 @@ crypto_open () {
 
     if /sbin/cryptsetup isLuks ${crypto_loop} > /dev/null 2>&1; then
 	crypto_open_cmd="/sbin/cryptsetup -q luksOpen ${crypto_loop} ${crypto_map}"
-	crypto_addkey_cmd="/sbin/cryptsetup -q luksAddKey ${crypto_loop} /etc/pdevs.key"
+	crypto_addkey_cmd="/sbin/cryptsetup -q luksAddKey ${crypto_loop} /etc/embedded.key"
 
 	if ${crypto_open_cmd} --key-file="${crypto_key}" > /dev/null 2>&1; then
 	    if [ -e "/dev/mapper/${crypto_map}" ]; then

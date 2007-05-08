@@ -12,31 +12,33 @@ Objective
 
 Design overview
 ---------------
-Currently, all configuration files and encryption keys for persistent 
-devices must be stored in an encrypted luks loopback device called "pdevs".
-
-The configuration files contained within pdevs are:
+The persistent vault (called: p-vault) is an encrypted luks loopback device 
+which will store all persistent related files securely - such as 
+configuration files and encryption keyfiles to the pdevs (persistent 
+devices). The configuration files currently supported are:
 	* pdevs.${pcom}.conf
 	* personalize.conf
 
 PCOM (persistence compliance) is a variable hardcoded into /etc/casper.conf 
-which differenciates between persistent devices configuration files, created 
-for different releases. This allows the user to have multiple peristent 
-devices on his system for different releases, without the worry of different 
-versions not complying with one another and therefore breaking something...
+which differenciates between the pdevs configuration files, created for 
+different releases. This allows the user to have multiple pdevs on his system
+for different releases, without the worry of different versions not 
+complying with one another and therefore breaking something...
 
-The pdevs loopback must be created by the user prior to booting in 
-persistent mode. Note that if the pdevs loopback is not found, or 
-inaccessable, then the system will boot in live mode. When the user creates 
-the pdevs loopback, the first slot will contain a custom passphrase to unlock
-the device. When the system boots in persistent mode, casper will attempt to 
-unlock the pdevs loopback with its embedded keyfile. If unsuccessful, casper
-will request the passphrase from the user and ask for confirmation whether 
-or not to add the embedded key to pdevs for quicker, uninterrupted future 
-system boots.
+The p-vault must be created by the user prior to booting into persistent mode.
+Note: if the p-vault is not found, or inaccessable, then the system will 
+continue as booted in live mode.
+
+When the user creates the p-vault, the first slot will contain a custom 
+passphrase to unlock the device. When the system boots in persistent mode, 
+casper will attempt to unlock the p-vault with its embedded keyfile. 
+
+If unsuccessful, casper will request the passphrase from the user and 
+request confirmation whether or not to add the embedded key to one of p-vaults
+slots to provide quicker, uninterrupted future system boots.
 
 The embedded keyfile is a random and unique 2048bit keyfile generated during 
-casper installation and embedded in the initramfs as /etc/pdevs.key.
+casper installation and embedded in the initramfs as /etc/embedded.key
 
 Currently, casper supports the persistent devices configurations as 
 explained in the example:
@@ -58,14 +60,13 @@ The pdev's will be stacked in the order they are specified. The lowest layer
 in the stack is the squashfs rootfs, with a tmpfs overlay ontop of it. If a 
 root "/" persistent overlay is specified, it will take presidence.
 
-It is recommended that the pdev labels (filename) include the PCOM, but it is
+It is recommended that the pdev label (filename) include the PCOM, but it is
 not mandatory. The pdev's can be stored on any partition with one of the 
 following filesystems: vfat, ext2, ext3.
 
 If the persistent devices are encrypted, and use keyfiles (recommended), the 
-keyfiles must be stored in the pdevs encrypted loopback, and must be called 
-${label}.key
-
+keyfiles must be stored in the p-vault, and must follow the naming 
+convention: ${label}.key
 
 The personalize configuration file will create and set the username, fullname
 and hostname. It must be present on first boot into persistent mode if using 
@@ -87,34 +88,35 @@ Setup process
 -------------
 Currently the setup process must be done manually.
 
-It is recommeneded to partition the system as descibed in the neverland notes.
-The following example assumes /dev/sda2 will be used for pdevs storage.
+It is recommended to partition the system as descibed in the neverland notes.
+The following example assumes /dev/sda2 will be used for p-vaults and pdevs 
+storage.
 
 * getting ready...
     > mkdir -p /mnt/sda2
     > mount -t ext3 /dev/sda2 /mnt/sda2
 
-* create pdevs loopback
-    > dd if=/dev/urandom of=/mnt/sda2/pdevs bs=1M count=25
-    > losetup /dev/loop1 /mnt/sda2/pdevs
+* create p-vault
+    > dd if=/dev/urandom of=/mnt/sda2/p-vault bs=1M count=25
+    > losetup /dev/loop1 /mnt/sda2/p-vault
     > cryptsetup --verbose --verify-passphrase --hash=sha256 \
       --cipher=aes-cbc-essiv:sha256 --key-size=256 luksFormat /dev/loop1
-    > cryptsetup luksOpen /dev/loop1 pdevs
-    > mkfs.ext3 /dev/mapper/pdevs
-    > mkdir -p /mnt/pdevs
-    > mount /dev/mapper/pdevs /mnt/pdevs
+    > cryptsetup luksOpen /dev/loop1 p-vault
+    > mkfs.ext3 /dev/mapper/p-vault
+    > mkdir -p /mnt/p-vault
+    > mount /dev/mapper/p-vault /mnt/p-vault
 
 * create personalized configuration file according to above example
-    * /mnt/pdevs/personalize.conf
+    * /mnt/p-vault/personalize.conf
 
 * create persistent devices compliance configuration file
     * /mnt/pdevs/pdevs.${pcom}.conf (see /etc/casper.conf for ${pcom})
         
 * create keyfiles for crypto pdevs
     * for ${label} in ${crypto pdevs}
-        > dd if=/dev/random of=/mnt/pdevs/${label}.key bs=1 count=256
-    > chown root:root /mnt/pdevs/*.key
-    > chmod 400 /mnt/pdevs/*.key
+        > dd if=/dev/random of=/mnt/p-vault/${label}.key bs=1 count=256
+    > chown root:root /mnt/p-vault/*.key
+    > chmod 400 /mnt/p-vault/*.key
 
 * create pdevs / crypto pdevs
     * for ${label} in ${pdevs}
@@ -122,8 +124,8 @@ The following example assumes /dev/sda2 will be used for pdevs storage.
         * if $pdev is crypto
             > losetup /dev/loop2 /mnt/sda2/${label}
             > cryptsetup --verbose --hash=sha256 --cipher=aes-cbc-essiv:sha256 \
-              --key-size=256 luksFormat /dev/loop2 /mnt/pdevs/${label}.key
-            > cryptsetup luksOpen /dev/loop2 ${label} --key-file=/mnt/pdevs/${label}.key
+              --key-size=256 luksFormat /dev/loop2 /mnt/p-vault/${label}.key
+            > cryptsetup luksOpen /dev/loop2 ${label} --key-file=/mnt/p-vault/${label}.key
             > mkfs.ext3 /dev/mapper/${label}
 
             > cryptsetup luksClose ${label}
@@ -131,9 +133,9 @@ The following example assumes /dev/sda2 will be used for pdevs storage.
         * else
           > mkfs.ext3 /mnt/sda2/${label}
         
-* close pdevs loopback
-    > umount /mnt/pdevs
-    > cryptsetup luksClose pdevs
+* close p-vault
+    > umount /mnt/p-vault
+    > cryptsetup luksClose p-vault
     > losetup -d /dev/loop1
 
 * close pdevs storage partition

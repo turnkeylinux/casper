@@ -24,73 +24,14 @@ parse_cmdline ()
     # looking for casper specifics options as kernel parameters
     for x in $(cat /proc/cmdline); do
         case $x in
-            userfullname=*)
-                export USERFULLNAME=${x#userfullname=}
-                export CASPERCONF="changed"
-                ;;
-            hostname=*)
-                export HOSTNAME=${x#hostname=}
-                export CASPERCONF="changed"
-                ;;
-            username=*)
-                export USERNAME=${x#username=}
-                export CASPERCONF="changed"
-                ;;
-            netboot*)
-                export NETBOOT=${x#netboot=} ;;
-            access=*)
-                export ACCESS=${x#access=} ;;
-            xdebconf)
-                export XDEBCONF="Yes" ;;
             toram)
                 export TORAM="Yes" ;;
-            todisk=*)
-                export TODISK=${x#todisk=} ;;
             showmounts)
                 export SHOWMOUNTS="Yes" ;;
             persistent)
                 export PERSISTENT="Yes" ;;
             nopersistent)
                 export PERSISTENT="" ;;
-            ip*)
-                STATICIP=${x#ip=}
-                if [ "${STATICIP}" == "" ]; then
-                    STATICIP="frommedia"
-                fi
-                export STATICIP ;;
-            casper-getty)
-                export CASPERGETTY=1 ;;
-            bootfrom=*|live-media=*)
-                export LIVEMEDIA=${x#*=} ;;
-            live-media-encryption=*|encryption=*)
-                export LIVEMEDIA_ENCRYPTION=${x#*=} ;;
-            live-media-timeout=*)
-                export LIVEMEDIA_TIMEOUT=${x#live-media-timeout=} ;;
-            live-media-offset=*)
-                export LIVEMEDIA_OFFSET=${x#live-media-offset=} ;;
-            locale=*|debian-installer/locale=*)
-                export LOCALE=${x#*=} ;;
-            keyb=*|kbd-chooser/method=*)
-                export KBD=${x#*=} ;;
-            klayout=*|console-setup/layoutcode=*)
-                export KLAYOUT=${x#*=} ;;
-            koptions=*)
-                export KOPTIONS=${x#koptions=} ;;
-            kvariant=*|console-setup/variantcode=*)
-                export KVARIANT=${x#*=} ;;
-            kmodel=*|console-setup/modelcode=*)
-                export KMODEL=${x#*=} ;;
-            module=*)
-                export MODULE=${x#module=} ;;
-            preseed/file=*|file=*)
-                export LOCATION="${x#*=}" ;;
-            */*=*)
-                question="${x%%=*}"
-                value="${x#*=}"
-                PRESEEDS="${PRESEEDS}\"${question}=${value}\" "
-                ;;
-            console=*)
-                export DEFCONSOLE="${x#*=}" ;;
         esac
     done
 
@@ -428,33 +369,30 @@ setup_unionfs() {
 
     if [ -n "${PERSISTENT}" ]; then
 	log_begin_msg "Persistent related tasks"
-	pdevs="pdevs"
-	pdevs_key="/etc/pdevs.key"
-	pdevs_mountp="/pdevs"
+	p_vault="p-vault"
+	embedded_key="/etc/embedded.key"
+	p_vault_mountp="/${p_vault}"
 
-	if [ -f "${pdevs_key}" ]; then
-	    pdevs_dev=$(probe_persistence "${pdevs}")
-	    if [ ${pdevs_dev} ]; then
-		pdevs_map=$(basename "${pdevs_dev}")
-	        if crypto_open "${pdevs_dev}" "${pdevs_map}" "${pdevs_key}"; then
-		    mkdir -p "${pdevs_mountp}"
-		    try_mount "/dev/mapper/${pdevs_map}" "${pdevs_mountp}" "ro"
+	if [ -f "${embedded_key}" ]; then
+	    p_vault_dev=$(probe_persistence "${p_vault}")
+	    if [ ${p_vault_dev} ]; then
+		p_vault_map=$(basename "${p_vault_dev}")
+	        if crypto_open "${p_vault_dev}" "${p_vault_map}" "${embedded_key}"; then
+		    mkdir -p "${p_vault_mountp}"
+		    try_mount "/dev/mapper/${p_vault_map}" "${p_vault_mountp}" "ro"
 
-		    personalize_conf="${pdevs_mountp}/personalize.conf"
-		    process_personalize_conf "${personalize_conf}"
+		    process_personalize_conf "${p_vault_mountp}/personalize.conf"
+		    process_pdevs_conf "${p_vault_mountp}/pdevs.${PCOM}.conf"
 
-		    pdevs_conf="${pdevs_mountp}/pdevs.${PCOM}.conf"
-		    process_pdevs_conf "${pdevs_conf}"
-
-		    umount ${pdevs_mountp}
-		    crypto_close ${pdevs_dev}
-		    rmdir ${pdevs_mountp}
+		    umount ${p_vault_mountp}
+		    crypto_close ${p_vault_dev}
+		    rmdir ${p_vault_mountp}
 		fi
 	    else
-		log_warning_msg "Unable to find pdevs loopback: ${pdevs}"
+		log_warning_msg "Unable to find persistent vault: ${p_vault}"
 	    fi
 	else
-	    log_warning_msg "Unable to find pdevs keyfile: ${pdevs_key}"
+	    log_warning_msg "Unable to find embedded keyfile: ${embedded_key}"
 	fi
         log_end_msg
     fi

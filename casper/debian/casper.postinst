@@ -1,9 +1,11 @@
 #! /bin/sh
 
-if [ ! -e /etc/pdevs.key ]; then
-    dd if=/dev/random of=/etc/pdevs.key bs=1 count=256
-    chown root:root /etc/pdevs.key
-    chmod 400 /etc/pdevs.key
+embedded_key="/etc/embedded.key"
+
+if [ ! -e ${embedded_key} ]; then
+    dd if=/dev/random of=${embedded_key} bs=1 count=256
+    chown root:root ${embedded_key}
+    chmod 400 ${embedded_key}
 fi
 
 update-initramfs -u
