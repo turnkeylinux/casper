@@ -27,7 +27,7 @@ if [ ${USERNAME_TMP} ]; then
 else
     # user doesn't exist (live or first time persistent overlay)
 chroot /root debconf-communicate -fnoninteractive casper > /dev/null <<EOF
-set passwd/root-password-crypted *
+set passwd/root-password-crypted $ROOTPASSWORD
 set passwd/user-password-crypted $USERPASSWORD
 set passwd/user-fullname $USERFULLNAME 
 set passwd/username $USERNAME
