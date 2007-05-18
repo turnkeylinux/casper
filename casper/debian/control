@@ -2,7 +2,7 @@ Source: casper
 Section: misc
 Priority: optional
 Maintainer: Tollef Fog Heen <tfheen@ubuntu.com>
-Build-Depends: debhelper (>> 4.2.0), lsb-release
+Build-Depends: debhelper (>> 4.2.0)
 Standards-Version: 3.6.1
 XS-Vcs-Bzr: http://bazaar.launchpad.net/~ubuntu-core-dev/casper/trunk
 
