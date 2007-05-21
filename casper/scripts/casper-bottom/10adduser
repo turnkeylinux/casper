@@ -57,19 +57,4 @@ if [ -f /root/etc/sudoers ]; then
     fi
 fi
 
-# XXX - awful hack to stop xscreensaver locking the screen (#7150)
-#echo 'RUNNING_UNDER_GDM="yes"' >> /root/etc/environment
-
-#for file in /usr/share/applications/ubiquity-gtkui.desktop /usr/share/applications/kde/ubiquity-kdeui.desktop; do
-#    if [ -f "/root/$file" ]; then
-#        chroot /root install -D -o $USERNAME -g $USERNAME $file /home/$USERNAME/Desktop/$(basename "$file")
-#        break
-#    fi
-#done
-
-#if [ -L /root/home/$USERNAME/Examples ]; then
-#    chroot /root install -o $USERNAME -g $USERNAME -d /home/$USERNAME/Desktop/
-#    mv /root/home/$USERNAME/Examples /root/home/$USERNAME/Desktop/
-#fi
-
 log_end_msg
