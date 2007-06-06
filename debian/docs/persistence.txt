@@ -86,17 +86,21 @@ Example personalize.conf
 
 Setup process
 -------------
-Currently the setup process must be done manually.
-
 It is recommended to partition the system as descibed in the neverland notes.
 The following example assumes /dev/sda2 will be used for p-vaults and pdevs 
 storage.
 
-* getting ready...
+If neverland is available, the frontend utilities can be used to ease 
+the process, if not, the process must be done manually.
+
+1. getting ready...
     > mkdir -p /mnt/sda2
     > mount -t ext3 /dev/sda2 /mnt/sda2
 
-* create p-vault
+2. create p-vault (neverland)
+    > neverland-create --type=loopback --path=/mnt/sda2/p-vault --size=25
+
+2. create p-vault (manually)
     > dd if=/dev/urandom of=/mnt/sda2/p-vault bs=1M count=25
     > losetup /dev/loop1 /mnt/sda2/p-vault
     > cryptsetup --verbose --verify-passphrase --hash=sha256 \
@@ -106,19 +110,25 @@ storage.
     > mkdir -p /mnt/p-vault
     > mount /dev/mapper/p-vault /mnt/p-vault
 
-* create personalized configuration file according to above example
+3. create personalized configuration file according to above example
     * /mnt/p-vault/personalize.conf
 
-* create persistent devices compliance configuration file
+4. create persistent devices compliance configuration file
     * /mnt/pdevs/pdevs.${pcom}.conf (see /etc/casper.conf for ${pcom})
-        
-* create keyfiles for crypto pdevs
+
+5. create crypto pdevs (neverland)
+    * for ${label} in ${crypto pdevs}
+        > neverland-create --type=loopback --path=/mnt/sda2/${label} \
+          --size=[???] --keyfile=/mnt/p-vault/${label}.key
+        > neverland-close ${label}
+
+5a. create keyfiles for crypto pdevs (manually)
     * for ${label} in ${crypto pdevs}
         > dd if=/dev/random of=/mnt/p-vault/${label}.key bs=1 count=256
     > chown root:root /mnt/p-vault/*.key
     > chmod 400 /mnt/p-vault/*.key
 
-* create pdevs / crypto pdevs
+5b. create pdevs / crypto pdevs (manually)
     * for ${label} in ${pdevs}
         > dd if=/dev/urandom of=/mnt/sda2/${label} bs=1M count=[???]
         * if $pdev is crypto
@@ -132,13 +142,16 @@ storage.
             > losetup -d /dev/loop2
         * else
           > mkfs.ext3 /mnt/sda2/${label}
-        
-* close p-vault
+
+6. close p-vault (neverland)
+    > neverland-close p-vault
+
+6. close p-vault (manually)
     > umount /mnt/p-vault
     > cryptsetup luksClose p-vault
     > losetup -d /dev/loop1
 
-* close pdevs storage partition
+7. close pdevs storage partition
     > umount /dev/sda2
 
 
