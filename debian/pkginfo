@@ -1,5 +1,4 @@
 RELEASE=sphinx
 REPODST=world/c/casper
-VERSION=sterile2
 SRC_BRANCH=1.83
 MAINTAINER="Alon Swartz <alon@sterilesecurity.com>"
