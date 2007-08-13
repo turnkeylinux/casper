@@ -4,6 +4,9 @@
 
 export PATH=/root/usr/bin:/root/usr/sbin:/root/bin:/root/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 
+echo "/root/lib" >> /etc/ld.so.conf
+echo "/root/usr/lib" >> /etc/ld.so.conf
+
 mountpoint=/media/live
 export mountpoint=$mountpoint
 
@@ -151,6 +154,7 @@ copy_live_to() {
 
     # begin copying..
     mkdir "${copyto}"
+    echo "mount -t ${fstype} ${mount_options} ${dev} ${copyto}"
     mount -t "${fstype}" ${mount_options} "${dev}" "${copyto}"
     cp -a ${copyfrom}/* ${copyto} # "cp -a" from busybox also copies hidden files
     umount ${copyfrom}
@@ -163,6 +167,9 @@ do_netmount() {
     rc=1
 
     modprobe "${MP_QUIET}" af_packet # For DHCP
+
+    udevtrigger
+    udevsettle
 
     ipconfig ${DEVICE} /tmp/net-${DEVICE}.conf | tee /netboot.config
 
@@ -528,7 +535,7 @@ mountroot() {
         if do_netmount ; then
             livefs_root="${mountpoint}"
         else
-            panic "Unable to find a the network rootfs live file system"
+            panic "Unable to find a live file system on the network"
         fi
     else
         # Scan local devices for the image

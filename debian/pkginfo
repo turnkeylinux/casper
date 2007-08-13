@@ -1,4 +1,4 @@
-RELEASE=sphinx
+RELEASE=diamond
 REPODST=world/c/casper
-SRC_BRANCH=1.83
+SRC_BRANCH=1.87
 MAINTAINER="Alon Swartz <alon@sterilesecurity.com>"

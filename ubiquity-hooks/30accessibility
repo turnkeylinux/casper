@@ -47,8 +47,8 @@ for x in $(cat /proc/cmdline); do
                           apt-install gnome-orca gnome-mag
                         fi
 
-                        if [ -e /target/usr/share/python-support/gnome-orca/orca/settings.py ]; then
-                            sed -i '/^enableSpeech\W/ s/True/False/;/^enableMagnifier/ s/False/True/' /target/usr/share/python-support/gnome-orca/orca/settings.py
+                        if [ -e /target/usr/share/pycentral/gnome-orca/site-packages/orca/settings.py ]; then
+                            sed -i '/^enableSpeech\W/ s/True/False/;/^enableMagnifier/ s/False/True/' /target/usr/share/pycentral/gnome-orca/site-packages/orca/settings.py
                         fi
 
                         kderc_addtoprefixes /usr/share/kubuntu-default-settings/kde-profile/lesser-visual-impairment/,/usr/share/kubuntu-default-settings/kde-profile/moderate-visual-impairment/
