@@ -29,6 +29,8 @@ parse_cmdline ()
         case $x in
             toram)
                 export TORAM="Yes" ;;
+            personalize)
+                export PERSONALIZE="Yes" ;;
             showmounts)
                 export SHOWMOUNTS="Yes" ;;
             persistent)
@@ -560,6 +562,12 @@ mountroot() {
     if [ "${live_dest}" ]; then
         log_begin_msg "Copying live_media to ${live_dest}"
         copy_live_to "${livefs_root}" "${live_dest}"
+        log_end_msg
+    fi
+
+    if [ "${PERSONALIZE}" ]; then
+        log_begin_msg "Personalizing"
+        personalize
         log_end_msg
     fi
 

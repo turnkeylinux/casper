@@ -1,6 +1,8 @@
 #!/bin/sh
 ## Casper helper functions, used by casper on boot and by casper-snapshot
 
+. /scripts/casper-interaction
+
 if [ "${BUILD_SYSTEM}" = "Ubuntu" ]; then
     MP_QUIET="-Q"
 elif [ "${BUILD_SYSTEM}" = "Debian" ]; then
@@ -291,6 +293,13 @@ crypto_close () {
     remove_loop "${crypto_dev}"
 }
 
+personalize () {
+    user_input=$(msg_prompt "> personalize username (${USERNAME}): ")
+    if [ ${user_input} ]; then export USERNAME=${user_input}; fi
+
+    host_input=$(msg_prompt "> personalize hostname (${HOST}): ")
+    if [ ${host_input} ]; then export HOST=${host_input}; fi
+}
 
 process_personalize_conf () {
     personalize_conf="${1}"

@@ -1,0 +1,47 @@
+#!/bin/sh
+
+# Usplash Notes
+#   TEXT will not show up when "quiet" is specified on /proc/cmdline
+#   INPUTENTER and CLEAR are buggy... 
+
+is_splash () {
+    if pidof usplash > /dev/null; then
+        if [ -x /sbin/usplash_write ]; then
+            return 0
+        fi
+        return 1
+    fi
+    return 1
+}
+
+msg_print () {
+    if is_splash; then
+        /sbin/usplash_write "INPUT $@, press enter to continue"
+        read input < /dev/.initramfs/usplash_outfifo
+    else
+        echo "$@" >&6
+    fi
+}
+
+msg_prompt () {
+    if is_splash; then
+        /sbin/usplash_write "INPUT $@"
+	read input < /dev/.initramfs/usplash_outfifo
+    else
+        echo -n "$@" >&6
+	read input
+    fi
+    echo "${input}"
+}
+
+msg_pass () {
+    if is_splash; then
+        /sbin/usplash_write "INPUTQUIET $@"
+	read input < /dev/.initramfs/usplash_outfifo
+    else
+        echo -n "$@" >&6
+	read -s input
+    fi
+    echo "${input}"
+}
+
