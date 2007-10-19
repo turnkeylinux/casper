@@ -44,8 +44,6 @@ binary-arch: build install
 	dh_testroot
 	dh_installman -a
 	dh_installexamples -a
-	# dh_installinit -a -r --no-start -- start 89 0 6 .
-	dh_installinit -a -r --no-start -- start 39 0 6 .
 	dh_installchangelogs -a
 	dh_link -a
 	dh_strip -a
