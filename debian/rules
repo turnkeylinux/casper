@@ -31,7 +31,6 @@ binary-indep: build install
 	dh_testdir
 	dh_testroot
 	dh_installexamples -i
-	dh_installdocs -i
 	dh_installchangelogs -i
 	dh_compress -i
 	dh_fixperms -i
@@ -43,7 +42,6 @@ binary-indep: build install
 binary-arch: build install
 	dh_testdir
 	dh_testroot
-	dh_installdocs -a
 	dh_installman -a
 	dh_installexamples -a
 	# dh_installinit -a -r --no-start -- start 89 0 6 .
