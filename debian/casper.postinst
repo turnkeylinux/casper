@@ -1,18 +1,5 @@
 #! /bin/sh
 
-# important note:
-# /dev/random will block until it gathers enough entropy for
-# randomness. The fastest way is creating entropy I have found
-# is to access the disk, but you can move the mouse if you like...
-
-embedded_key="/etc/embedded.key"
-
-if [ ! -e ${embedded_key} ]; then
-    dd if=/dev/random of=${embedded_key} bs=1 count=256
-    chown root:root ${embedded_key}
-    chmod 400 ${embedded_key}
-fi
-
 update-initramfs -u
 
 #DEBHELPER#
