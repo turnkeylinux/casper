@@ -31,12 +31,10 @@ parse_cmdline ()
                 export TORAM="Yes" ;;
             personalize)
                 export PERSONALIZE="Yes" ;;
+            ecto)
+                export ECTO="Yes" ;;
             showmounts)
                 export SHOWMOUNTS="Yes" ;;
-            persistent)
-                export PERSISTENT="Yes" ;;
-            nopersistent)
-                export PERSISTENT="" ;;
         esac
     done
 
@@ -376,36 +374,11 @@ setup_unionfs() {
     mount tmpfs -t tmpfs -o rw /cow || panic "Can not mount tmpfs on /cow"
     mount -t unionfs -o dirs=/cow=rw:$rofsstring unionfs "$rootmnt" || panic "Unionfs mount failed"
 
-    if [ -n "${PERSISTENT}" ]; then
-	log_begin_msg "Persistent related tasks"
-	p_vault="p-vault"
-	embedded_key="/etc/embedded.key"
-	p_vault_mountp="/${p_vault}"
-
-	if [ -f "${embedded_key}" ]; then
-	    p_vault_dev=$(probe_persistence "${p_vault}")
-	    if [ ${p_vault_dev} ]; then
-		p_vault_map=$(basename "${p_vault_dev}")
-	        if crypto_open "${p_vault_dev}" "${p_vault_map}" "${embedded_key}"; then
-		    mkdir -p "${p_vault_mountp}"
-		    try_mount "/dev/mapper/${p_vault_map}" "${p_vault_mountp}" "ro"
-
-		    process_personalize_conf "${p_vault_mountp}/personalize.conf"
-		    process_pdevs_conf "${p_vault_mountp}/pdevs.${PCOM}.conf"
-
-		    umount ${p_vault_mountp}
-		    crypto_close ${p_vault_dev}
-		    rmdir ${p_vault_mountp}
-		fi
-	    else
-		log_warning_msg "Unable to find persistent vault: ${p_vault}"
-	    fi
-	else
-	    log_warning_msg "Unable to find embedded keyfile: ${embedded_key}"
-	fi
+    if [ -n "${ECTO}" ] && [ -e /scripts/ecto ]; then
+        log_begin_msg "Ectoplasm related tasks"
+        . /scripts/ecto
         log_end_msg
     fi
-
 
     if [ -n "${SHOWMOUNTS}" ]; then
         for d in ${rofslist}; do
