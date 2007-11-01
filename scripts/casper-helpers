@@ -173,14 +173,6 @@ try_mount ()
     fi
 }
 
-personalize () {
-    user_input=$(msg_prompt "> personalize username (${USERNAME}): ")
-    if [ ${user_input} ]; then export USERNAME=${user_input}; fi
-
-    host_input=$(msg_prompt "> personalize hostname (${HOST}): ")
-    if [ ${host_input} ]; then export HOST=${host_input}; fi
-}
-
 find_cow_device() {
     pers_label="${1}"
     for sysblock in $(echo /sys/block/* | tr ' ' '\n' | grep -v loop); do

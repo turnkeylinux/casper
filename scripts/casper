@@ -538,12 +538,6 @@ mountroot() {
         log_end_msg
     fi
 
-    if [ "${PERSONALIZE}" ]; then
-        log_begin_msg "Personalizing"
-        personalize
-        log_end_msg
-    fi
-
     mount_images_in_directory "${livefs_root}" "${rootmnt}"
 
     log_end_msg

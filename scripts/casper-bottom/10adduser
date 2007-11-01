@@ -22,10 +22,14 @@ log_begin_msg "$DESCRIPTION"
 
 USERNAME_TMP=$(cat /root/etc/passwd | grep "999" | cut -f1 -d ':')
 if [ ${USERNAME_TMP} ]; then
-    # user already exists (persistent overlay)
+    # user already exists (ecto overlay)
     export USERNAME=$USERNAME_TMP
 else
-    # user doesn't exist (live or first time persistent overlay)
+    # user doesn't exist (live or first time ecto overlay)
+    if [ "${PERSONALIZE}" ]; then
+        user_input=$(msg_prompt "> personalize username (${USERNAME}): ")
+        if [ ${user_input} ]; then export USERNAME=${user_input}; fi
+    fi
 chroot /root debconf-communicate -fnoninteractive casper > /dev/null <<EOF
 set passwd/root-password-crypted $ROOTPASSWORD
 set passwd/user-password-crypted $USERPASSWORD
