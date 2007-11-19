@@ -4,6 +4,7 @@ PREREQ=""
 DESCRIPTION="Setting hostname..."
 
 . /scripts/casper-functions
+. /scripts/casper-interaction
 
 prereqs()
 {
