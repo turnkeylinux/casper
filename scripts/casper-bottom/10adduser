@@ -26,11 +26,6 @@ if [ ${USERNAME_TMP} ]; then
     # user already exists (ecto overlay)
     export USERNAME=$USERNAME_TMP
 else
-    # user doesn't exist (live or first time ecto overlay)
-    if [ "${PERSONALIZE}" ]; then
-        user_input=$(msg_prompt "> personalize username (${USERNAME}): ")
-        if [ ${user_input} ]; then export USERNAME=${user_input}; fi
-    fi
 chroot /root debconf-communicate -fnoninteractive casper > /dev/null <<EOF
 set passwd/root-password-crypted $ROOTPASSWORD
 set passwd/user-password-crypted $USERPASSWORD
@@ -51,8 +46,6 @@ set passwd/user-uid
 EOF
 
 fi
-
-
 
 if [ -f /root/etc/sudoers ]; then
     if [ "${BUILD_SYSTEM}" = "Ubuntu" ]; then

@@ -22,14 +22,10 @@ esac
 log_begin_msg "$DESCRIPTION"
 
 if [ ! -f /root/etc/hosts ]; then
-    if [ "${PERSONALIZE}" ]; then
-        host_input=$(msg_prompt "> personalize hostname (${HOST}): ")
-        if [ ${host_input} ]; then export HOST=${host_input}; fi
-    fi
 
     echo "$HOST" > /root/etc/hostname
 
-cat > /root/etc/hosts <<EOF
+    cat > /root/etc/hosts <<EOF
 127.0.0.1 localhost
 127.0.1.1 $HOST
 

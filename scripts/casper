@@ -29,8 +29,6 @@ parse_cmdline ()
         case $x in
             toram)
                 export TORAM="Yes" ;;
-            personalize)
-                export PERSONALIZE="Yes" ;;
             ecto)
                 export ECTO="Yes" ;;
             showmounts)
