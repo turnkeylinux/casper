@@ -129,7 +129,7 @@ copy_live_to() {
     if [ "${copytodev}" = "ram" ]; then
         # copying to ram:
         freespace=$( expr $(awk '/MemFree/{print $2}' /proc/meminfo) + $( cat /proc/meminfo | grep Cached | head -n 1 | awk '/Cached/{print $2}' - ) )
-#        freespace=$(( ${freespace} - (${size}/3) )) # we need atleast 1/3 free when running
+        freespace=$( expr ${freespace} - $( expr ${size} / 3 ) )  # we need atleast 1/3 free when running
         mount_options="-o size=${size}k"
         free_string="memory"
         fstype="tmpfs"
