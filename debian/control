@@ -10,7 +10,7 @@ Package: casper
 Architecture: any
 Section: misc
 Priority: extra
-Depends: initramfs-tools (>= 0.40ubuntu11), dmsetup, user-setup, sudo, eject
+Depends: initramfs-tools (>= 0.40ubuntu11), dmsetup, user-setup, sudo, eject, aufs-modules
 Conflicts: usplash (<< 0.4-43)
 Recommends: ectoplasm
 Tag: admin::boot, admin::filesystem, implemented-in::shell, protocol::smb, role::plugin, scope::utility, special::completely-tagged, works-with-format::iso9660

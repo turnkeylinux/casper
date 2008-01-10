@@ -19,6 +19,7 @@ esac
 . /usr/share/initramfs-tools/hook-functions
 
 manual_add_modules unionfs
+manual_add_modules aufs
 
 # We need losetup
 copy_exec /sbin/losetup /sbin
