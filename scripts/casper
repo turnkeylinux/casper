@@ -330,7 +330,7 @@ setup_unionfs() {
     image_directory="$1"
     rootmnt="$2"
 
-    modprobe "${MP_QUIET}" -b unionfs
+    modprobe "${MP_QUIET}" -b aufs
 
     # run-init can't deal with images in a subdir, but we're going to
     # move all of these away before it runs anyway.  No, we're not,
@@ -342,11 +342,7 @@ setup_unionfs() {
     # Let's just mount the read-only file systems first
     rofsstring=""
     rofslist=""
-    if [ "${NETBOOT}" = "nfs" ] ; then
-        roopt="nfsro" # go aroung a bug in nfs-unionfs locking
-    else
-        roopt="ro"
-    fi
+    roopt="ro"
 
     mkdir -p "${croot}"
     for image_type in "ext2" "squashfs" "dir" ; do
@@ -371,7 +367,7 @@ setup_unionfs() {
 
     mkdir -p /cow
     mount tmpfs -t tmpfs -o rw /cow || panic "Can not mount tmpfs on /cow"
-    mount -t unionfs -o dirs=/cow=rw:$rofsstring unionfs "$rootmnt" || panic "Unionfs mount failed"
+    mount -t aufs -o dirs=/cow=rw:$rofsstring aufs "$rootmnt" || panic "Union mount failed"
 
     if [ -n "${ECTO}" ] && [ -e /scripts/ecto ]; then
         log_begin_msg "Ectoplasm related tasks"
