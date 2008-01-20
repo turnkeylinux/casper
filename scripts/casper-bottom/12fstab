@@ -22,7 +22,7 @@ esac
 log_begin_msg "$DESCRIPTION"
 
 cat > $FSTAB <<EOF
-unionfs / unionfs rw 0 0
+aufs / aufs rw 0 0
 tmpfs /tmp tmpfs nosuid,nodev 0 0
 EOF
 
