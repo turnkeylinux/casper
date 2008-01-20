@@ -94,7 +94,7 @@ mount_images_in_directory() {
     if match_files_in_dir "$directory/casper/*.squashfs" ||
         match_files_in_dir "$directory/casper/*.ext2" ||
         match_files_in_dir "$directory/casper/*.dir"; then
-        setup_unionfs "$directory/casper" "$rootmnt"
+        setup_aufs "$directory/casper" "$rootmnt"
     else
         :
     fi
@@ -336,7 +336,7 @@ try_snap ()
     return 0
 }
 
-setup_unionfs() {
+setup_aufs() {
     image_directory="$1"
     rootmnt="$2"
 
