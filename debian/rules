@@ -42,7 +42,7 @@ binary-indep: build install
 binary-arch: build install
 	dh_testdir
 	dh_testroot
-	dh_installinit -r --init-script=eject-if-toram --no-start -- start 99 S .
+	dh_installinit -r --init-script=eject-if-toram --no-start -- start 99 2 .
 	dh_installman -a
 	dh_installexamples -a
 	dh_installchangelogs -a
