@@ -9,7 +9,7 @@ case "$1" in
   start)
     log_begin_msg "Starting $NAME"
     if grep -q "/dev/shm /media/live tmpfs rw 0 0" /proc/mounts; then
-        eject
+        eject &
     fi
     log_action_end_msg $?
   ;;
