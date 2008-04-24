@@ -31,6 +31,7 @@ binary-indep: build install
 	dh_testdir
 	dh_testroot
 	dh_installexamples -i
+	dh_installdocs -i
 	dh_installchangelogs -i
 	dh_compress -i
 	dh_fixperms -i
@@ -42,9 +43,10 @@ binary-indep: build install
 binary-arch: build install
 	dh_testdir
 	dh_testroot
-	dh_installinit -r --init-script=eject-if-toram --no-start -- start 99 2 .
+	dh_installdocs -a
 	dh_installman -a
 	dh_installexamples -a
+	dh_installinit -r --init-script=eject-if-toram --no-start -- start 99 2 .
 	dh_installchangelogs -a
 	dh_link -a
 	dh_strip -a

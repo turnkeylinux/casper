@@ -1,8 +1,8 @@
-bin/casper-getty		sbin
-bin/casper-login		sbin
-bin/casper-preseed		usr/share/casper
-bin/casper-reconfigure		usr/share/casper
-bin/casper-snapshot		sbin
-hooks				usr/share/initramfs-tools
-scripts				usr/share/initramfs-tools
+bin/casper-getty        sbin
+bin/casper-login        sbin
+bin/casper-snapshot     sbin
+bin/casper-preseed      usr/share/casper
+bin/casper-reconfigure  usr/share/casper
+hooks                   usr/share/initramfs-tools
+scripts                 usr/share/initramfs-tools
 

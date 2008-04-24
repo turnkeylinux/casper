@@ -37,6 +37,29 @@
 #include "md5.h"
 #define DEBUG
 
+static int verbose = 1;
+static int got_usplash = 0;
+
+void parse_cmdline(void) {
+  FILE *cmdline = fopen("/proc/cmdline", "r");
+  char buf[1024];
+  size_t len;
+  char *bufp = buf, *tok;
+
+  if (!cmdline)
+    return;
+
+  len = fread(buf, 1023, 1, cmdline);
+  buf[len] = '\0';
+
+  while ((tok = strsep(&bufp, " ")) != NULL) {
+    if (strncmp(tok, "quiet", 5) == 0)
+      verbose = 0;
+  }
+
+  fclose(cmdline);
+}
+
 int write_and_retry(int fd, char *s) {
   int try = 0, ret = 0;
   char *end;
@@ -60,12 +83,14 @@ int write_and_retry(int fd, char *s) {
 void usplash_timeout(int fd, int timeout) {
   char *s;
 
+  if (!got_usplash)
+    return;
+
   asprintf(&s, "TIMEOUT %d", timeout);
 
   write_and_retry(fd, s);
 
   free(s);
-
 }
 
 void usplash_failure(int fd, char *format, ...) {
@@ -76,12 +101,16 @@ void usplash_failure(int fd, char *format, ...) {
   vasprintf(&s, format, argp);
   va_end(argp);
 
-  asprintf(&s1, "FAILURE %s", s);
+  if (got_usplash) {
+    asprintf(&s1, "FAILURE %s", s);
 
-  write_and_retry(fd, s1);
+    write_and_retry(fd, s1);
+
+    free(s1);
+  } else if (verbose)
+    printf("%s\n", s);
 
   free(s);
-  free(s1);
 }
 
 void usplash_text(int fd, char *format, ...) {
@@ -92,12 +121,18 @@ void usplash_text(int fd, char *format, ...) {
   vasprintf(&s, format, argp);
   va_end(argp);
 
-  asprintf(&s1, "TEXT %s", s);
+  if (got_usplash) {
+    asprintf(&s1, "TEXT %s", s);
 
-  write_and_retry(fd, s1);
+    write_and_retry(fd, s1);
+
+    free(s1);
+  } else if (verbose) {
+    printf("%s...", s);
+    fflush(stdout);
+  }
 
   free(s);
-  free(s1);
 }
 
 void usplash_urgent(int fd, char *format, ...) {
@@ -108,12 +143,16 @@ void usplash_urgent(int fd, char *format, ...) {
   vasprintf(&s, format, argp);
   va_end(argp);
 
-  asprintf(&s1, "TEXT-URGENT %s", s);
+  if (got_usplash) {
+    asprintf(&s1, "TEXT-URGENT %s", s);
 
-  write_and_retry(fd, s1);
+    write_and_retry(fd, s1);
+
+    free(s1);
+  } else
+    printf("%s\n", s);
 
   free(s);
-  free(s1);
 }
 
 
@@ -125,12 +164,16 @@ void usplash_success(int fd, char *format, ...) {
   vasprintf(&s, format, argp);
   va_end(argp);
 
-  asprintf(&s1, "SUCCESS %s", s);
+  if (got_usplash) {
+    asprintf(&s1, "SUCCESS %s", s);
 
-  write_and_retry(fd, s1);
-  
+    write_and_retry(fd, s1);
+    
+    free(s1);
+  } else if (verbose)
+    printf("%s\n", s);
+
   free(s);
-  free(s1);
 }
 
 void usplash_progress(int fd, int progress) {
@@ -141,11 +184,16 @@ void usplash_progress(int fd, int progress) {
     return;
   prevprogress = progress;
 
-  asprintf(&s, "PROGRESS %d", progress);
+  if (got_usplash) {
+    asprintf(&s, "PROGRESS %d", progress);
 
-  write_and_retry(fd, s);
+    write_and_retry(fd, s);
 
-  free(s);
+    free(s);
+  } else {
+    printf("%d%%...", progress);
+    fflush(stdout);
+  }
 }
 
 int set_nocanonical_tty(int fd) {
@@ -186,13 +234,16 @@ int main(int argc, char **argv) {
     exit(1);
   }
   
+  parse_cmdline();
+
   pipe_fd = open(USPLASH_FIFO, O_WRONLY|O_NONBLOCK);
   
   if (pipe_fd == -1) {
-    /* We can't really do anything useful here */
+    /* Fall back to text output */
     perror("Opening pipe");
-    exit(1);
-  }
+    got_usplash = 0;
+  } else
+    got_usplash = 1;
   
 
   usplash_progress(pipe_fd, 0);
@@ -255,6 +306,7 @@ int main(int argc, char **argv) {
     free(checksum);
     free(checkfile);
   }
+  fclose(md5_file);
   if (failed) {
     usplash_urgent(pipe_fd, "Check finished: errors found in %d files!", failed);
   } else {

@@ -15,4 +15,8 @@ prereqs)
        ;;
 esac
 
-grep integrity-check /proc/cmdline && casper-md5check ${mountpoint} ${mountpoint}/md5sum.txt < /dev/tty8 
+if grep -q integrity-check /proc/cmdline; then
+	casper-md5check /cdrom /cdrom/md5sum.txt < /dev/tty8 > /dev/tty8
+	reboot
+	while :; do sleep 60; done
+fi

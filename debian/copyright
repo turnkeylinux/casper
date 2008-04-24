@@ -30,7 +30,8 @@ License (casper-md5check/md5.c, casper-md5check/md5,h}):
 License (everything else):
 
 	Copyright (C) 2006 Marco Amadori <marco.amadori@gmail.com>
-	Copyright (C) 2005-2006 Canonical Ltd. <http://www.cannonical.com/>
+	Copyright (C) 2005-2008 Canonical Ltd. <http://www.canonical.com/>
+	Copyright (C) 2008 Dell Inc.
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
