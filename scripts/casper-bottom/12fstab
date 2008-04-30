@@ -21,7 +21,7 @@ esac
 
 log_begin_msg "$DESCRIPTION"
 
-cat > $FSTAB <<EOF
+grep -q "UNCONFIGURED FSTAB" $FSTAB && (cat > $FSTAB <<EOF)
 aufs / aufs rw 0 0
 tmpfs /tmp tmpfs nosuid,nodev 0 0
 EOF
