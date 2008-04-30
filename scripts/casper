@@ -21,10 +21,7 @@ if [ ! -f /casper.vars ]; then
     touch /casper.vars
 fi
 
-parse_cmdline ()
-{
-    PRESEEDS=
-    # looking for casper specifics options as kernel parameters
+parse_cmdline() {
     for x in $(cat /proc/cmdline); do
         case $x in
             toram=*)
@@ -35,21 +32,6 @@ parse_cmdline ()
                 export SHOWMOUNTS="Yes" ;;
         esac
     done
-
-    # sort of compatibility with netboot.h from linux docs
-    if [ -z "${NETBOOT}" ]; then
-        if [ "${ROOT}" == "/dev/nfs" ]; then
-            NETBOOT="nfs"
-            export NETBOOT
-        elif [ "${ROOT}" == "/dev/cifs" ]; then
-            NETBOOT="cifs"
-            export NETBOOT
-        fi
-    fi
-
-    if [ -z "${MODULE}" ]; then
-        MODULE=order
-    fi
 }
 
 is_casper_path() {
@@ -139,7 +121,7 @@ copy_live_to() {
         maybe_break casper_toram
 
         if [ "${required}" -lt "0" ]; then
-            log_warning_msg "Not enough required free ${free_string} (${freespace}k - ${size}k - ${reserved}M < 0) to copy live media in ${copytodev}."
+            log_warning_msg "Not enough required free ${free_string} (${freespace}k - ${size}k - ${TORAM}M < 0) to copy live media in ${copytodev}."
             return 1
         fi
 
@@ -177,8 +159,8 @@ do_netmount() {
 
     modprobe "${MP_QUIET}" af_packet # For DHCP
 
-    udevtrigger
-    udevsettle
+    /sbin/udevadm trigger
+    /sbin/udevadm settle
 
     ipconfig ${DEVICE} /tmp/net-${DEVICE}.conf | tee /netboot.config
 
@@ -260,7 +242,7 @@ do_snap_copy ()
         fstype=$(get_fstype "${fromdev}")
         if [ -n "${fstype}" ]; then
             # Copying stuff...
-            mount -t "${fstype}" -o ro "${fromdev}" "${tomount}"
+            mount -t "${fstype}" -o ro,noatime "${fromdev}" "${tomount}"
             cp -a "${tomount}"/* ${todir}
             umount "${tomount}"
         else
@@ -352,7 +334,7 @@ setup_aufs() {
     # Let's just mount the read-only file systems first
     rofsstring=""
     rofslist=""
-    roopt="ro"
+    roopt="rr"
 
     mkdir -p "${croot}"
     for image_type in "ext2" "squashfs" "dir" ; do
@@ -369,15 +351,15 @@ setup_aufs() {
                     panic "Unknown file system type on ${backdev} (${image})"
                 fi
                 mkdir -p "${croot}/${imagename}"
-                mount -t "${fstype}" -o ro "${backdev}" "${croot}/${imagename}" || panic "Can not mount $backdev ($image) on ${croot}/${imagename}" && rofsstring="${croot}/${imagename}=${roopt}:${rofsstring}" && rofslist="${croot}/${imagename} ${rofslist}"
+                mount -t "${fstype}" -o ro,noatime "${backdev}" "${croot}/${imagename}" || panic "Can not mount $backdev ($image) on ${croot}/${imagename}" && rofsstring="${croot}/${imagename}=${roopt}:${rofsstring}" && rofslist="${croot}/${imagename} ${rofslist}"
             fi
         done
     done
     rofsstring=${rofsstring%:}
 
     mkdir -p /cow
-    mount tmpfs -t tmpfs -o rw /cow || panic "Can not mount tmpfs on /cow"
-    mount -t aufs -o dirs=/cow=rw:$rofsstring aufs "$rootmnt" || panic "Union mount failed"
+    mount tmpfs -t tmpfs -o rw,noatime,mode=755 /cow || panic "Can not mount tmpfs on /cow"
+    mount -t aufs -o noatime,dirs=/cow=rw:$rofsstring aufs "$rootmnt" || panic "aufs mount failed"
 
     if [ -n "${ECTO}" ] && [ -e /scripts/ecto ]; then
         log_begin_msg "Ectoplasm related tasks"
@@ -423,7 +405,7 @@ check_dev ()
 
     fstype=$(get_fstype "${devname}")
     if is_supported_fs ${fstype}; then
-        mount -t ${fstype} -o ro "${devname}" $mountpoint || continue
+        mount -t ${fstype} -o ro,noatime "${devname}" $mountpoint || continue
         if is_casper_path $mountpoint; then
             echo $mountpoint
             return 0
@@ -480,12 +462,6 @@ find_livefs() {
     return 1
 }
 
-pulsate() {
-    if [ -x /sbin/usplash_write ]; then
-        /sbin/usplash_write "PULSATE"
-    fi
-}
-
 set_usplash_timeout() {
     if [ -x /sbin/usplash_write ]; then
         /sbin/usplash_write "TIMEOUT 120"
@@ -502,7 +478,6 @@ mountroot() {
 
     set_usplash_timeout
     [ "$quiet" != "y" ] && log_begin_msg "Running /scripts/casper-premount"
-    pulsate
     run_scripts /scripts/casper-premount
     [ "$quiet" != "y" ] && log_end_msg
 
@@ -550,7 +525,6 @@ mountroot() {
     maybe_break casper-bottom
     [ "$quiet" != "y" ] && log_begin_msg "Running /scripts/casper-bottom"
 
-    pulsate
     run_scripts /scripts/casper-bottom
     [ "$quiet" != "y" ] && log_end_msg
 

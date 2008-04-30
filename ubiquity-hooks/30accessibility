@@ -1,4 +1,5 @@
 #!/bin/sh
+# If you change this, please also change the copy in scripts/casper-bottom/30accessibility.
 
 . /usr/share/debconf/confmodule
 
@@ -41,27 +42,47 @@ for x in $(cat /proc/cmdline); do
                         # Moderate Visual Impairment
                         access=v2)
                         gct -s -t bool /desktop/gnome/interface/accessibility true
-                        gct -s -t list --list-type=string /desktop/gnome/accessibility/startup/exec_ats [orca]
+                        gct -s -t bool /desktop/gnome/applications/at/visual/startup true
+                        gct -s -t bool /apps/gksu/disable-grab true
 
                         if [ -d /usr/share/xubuntu-default-settings ]; then
                           apt-install gnome-orca gnome-mag
                         fi
 
-                        if [ -e /target/usr/share/pycentral/gnome-orca/site-packages/orca/settings.py ]; then
-                            sed -i '/^enableSpeech\W/ s/True/False/;/^enableMagnifier/ s/False/True/' /target/usr/share/pycentral/gnome-orca/site-packages/orca/settings.py
-                        fi
+			if chroot /target type orca >/dev/null 2>&1 ; then
+				mkdir -p /target/home/$USERNAME/.orca
+				echo "import orca.settings" >> /target/home/$USERNAME/.orca/user-settings.py
+				echo "orca.settings.enableSpeech = True" >> /target/home/$USERNAME/.orca/user-settings.py
+				echo "orca.settings.enableMagnifier = True" >> /target/home/$USERNAME/.orca/user-settings.py
+				chroot /target chown -R $USERNAME.$USERNAME /home/$USERNAME/.orca
+			fi
 
                         kderc_addtoprefixes /usr/share/kubuntu-default-settings/kde-profile/lesser-visual-impairment/,/usr/share/kubuntu-default-settings/kde-profile/moderate-visual-impairment/
                         ;;
                         # Blindness
                         access=v3)
-                        gct -s -t bool /desktop/gnome/sound/enable_esd false
                         gct -s -t bool /desktop/gnome/interface/accessibility true
-                        gct -s -t list --list-type=string /desktop/gnome/accessibility/startup/exec_ats [orca]
+                        gct -s -t bool /desktop/gnome/applications/at/visual/startup true
+                        gct -s -t bool /apps/gksu/disable-grab true
+                        gct -s -t string /desktop/gnome/applications/window_manager/default /usr/bin/metacity
 
                         if [ -d /usr/share/xubuntu-default-settings ]; then
                           apt-install gnome-orca
                         fi
+                        ;;
+                        # Braille
+                        braille=ask)
+                        gct -s -t bool /desktop/gnome/interface/accessibility true
+                        gct -s -t bool /desktop/gnome/applications/at/visual/startup true
+                        if chroot /target type orca >/dev/null 2>&1 ; then
+                                mkdir -p /target/home/$USERNAME/.orca
+				echo "import orca.settings" >> /target/home/$USERNAME/.orca/user-settings.py
+                                echo "orca.settings.enableSpeech = False" >> /target/home/$USERNAME/.orca/user-settings.py
+                                echo "orca.settings.enableBraille = True" >> /target/home/$USERNAME/.orca/user-settings.py
+				chroot /target chown -R $USERNAME.$USERNAME /home/$USERNAME/.orca
+                        fi
+                        gct -s -t bool /apps/gksu/disable-grab true
+                        gct -s -t string /desktop/gnome/applications/window_manager/default /usr/bin/metacity
                         ;;
                         # Minor Motor Difficulties
                         access=m1)
@@ -73,6 +94,7 @@ for x in $(cat /proc/cmdline); do
                         gct -s -t bool /desktop/gnome/peripherals/keyboard/repeat true
                         gct -s -t int /desktop/gnome/peripherals/keyboard/delay 700
                         gct -s -t int /desktop/gnome/peripherals/keyboard/rate 10
+                        gct -s -t bool /apps/gksu/disable-grab true
                         kderc_addtoprefixes /usr/share/kubuntu-default-settings/kde-profile/minor-motor-difficulties/
                         if [ -e /target/etc/xdg/xfce4/mcs_settings/keyboard.xml ]; then
                             sed -i 's/0/1/' /target/etc/xdg/xfce4/mcs_settings/keyboard.xml
@@ -85,7 +107,8 @@ for x in $(cat /proc/cmdline); do
                         gct -s -t bool /desktop/gnome/accessibility/keyboard/stickykeys_enable true
                         gct -s -t bool /desktop/gnome/accessibility/keyboard/stickykeys_modifier_beep false
                         gct -s -t bool /desktop/accessibility/gnome/keyboard/stickykeys_two_key_off false
-                        gct -s -t list --list-type=string /desktop/gnome/accessibility/startup/exec_ats [onboard]
+                        gct -s -t bool /desktop/gnome/applications/at/mobility/startup true
+                        gct -s -t string /desktop/gnome/applications/at/mobility/exec onboard
                         kderc_addtoprefixes /usr/share/kubuntu-default-settings/kde-profile/minor-motor-difficulties/,/usr/share/kubuntu-default-settings/kde-profile/motor-difficulties-pointing-devices/
                         if [ -e /target/etc/xdg/xfce4/mcs_settings/keyboard.xml ]; then
                             sed -i '/Sticky/ s/0/1/' /target/etc/xdg/xfce4/mcs_settings/keyboard.xml

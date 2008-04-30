@@ -141,7 +141,7 @@ Do_snapshot ()
 		ext2)
 			DU_DIM="`du -ks ${COW} | cut -f1`"
 			REAL_DIM="`expr ${DU_DIM} + ${DU_DIM} / 20`" # Just 5% more to be sure, need something more sophistcated here...
-			genext2fs --size-in-blocks=${REAL_DIM} --reserved-blocks=0 --root="${COW}" "${DEST}" || exit 1
+			genext2fs --size-in-blocks=${REAL_DIM} --reserved-percentage=0 --root="${COW}" "${DEST}" || exit 1
 			;;
 		*)
 			echo "Internal error."
@@ -164,8 +164,7 @@ Is_same_mount ()
 Parse_args ()
 {
 	# Parse command line
-	ARGS="$1"
-	ARGUMENTS="`getopt --longoptions cow:,device:,output,resync-string:,type:,help,usage,version --name=${PROGRAM} --options c:d:o:t:r:,h,u,v --shell sh -- ${ARGS}`"
+	ARGUMENTS="`getopt --longoptions cow:,device:,output,resync-string:,type:,help,usage,version --name=${PROGRAM} --options c:d:o:t:r:,h,u,v --shell sh -- "$@"`"
 
 	if [ "$?" != "0" ]; then
 		echo "Terminating." >&2
@@ -226,7 +225,6 @@ Defaults ()
 	MOUNTP="/mnt/casper-snapshot"
 	COW="/cow"
 	DEV=""
-	DEST="${MOUNTP}/casper-sn.cpio.gz"
 	TYPE="cpio"
 	DESKTOP_LINK=/home/$USERNAME/Desktop/casper-snapshot
 
@@ -264,6 +262,18 @@ Defaults ()
 				TYPE="cpio" ;;
 			*)
 				Usage "Error: unrecognized snapshot type"
+				;;
+		esac
+		case "${TYPE}" in
+			cpio)
+				DEST="${MOUNTP}/casper-sn.cpio.gz" ;;
+			squashfs)
+				DEST="${MOUNTP}/casper-sn.squashfs" ;;
+			ext2)
+				DEST="${MOUNTP}/casper-sn.ext2" ;;
+			*)
+				echo "Internal error."
+				exit 1
 				;;
 		esac
 		#if [ -d 

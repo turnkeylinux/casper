@@ -1,4 +1,3 @@
-#!/bin/sh
 ## Casper helper functions, used by casper on boot and by casper-snapshot
 
 if [ "${BUILD_SYSTEM}" = "Ubuntu" ]; then
@@ -16,7 +15,7 @@ fi
 
 sys2dev() {
     sysdev=${1#/sys}
-    echo "/dev/$(udevinfo -q name -p ${sysdev} 2>/dev/null|| echo ${sysdev##*/})"
+    echo "/dev/$(/sbin/udevadm info -q name -p ${sysdev} 2>/dev/null|| echo ${sysdev##*/})"
 }
 
 subdevices() {
@@ -39,17 +38,6 @@ get_fstype() {
         return 0
     fi
     /lib/udev/vol_id -t $1 2>/dev/null
-}
-
-is_supported_blockdev () {
-    blockdev="${1}"
-    fstype=$(get_fstype "${blockdev}")
-    case ${fstype} in
-        vfat|ext2|ext3) # FIXME: what about other filesystems?
-            return 0
-            ;;
-    esac
-    return 1
 }
 
 where_is_mounted() {
@@ -127,11 +115,18 @@ setup_loop() {
     local offset=$4
 
     modprobe ${MP_QUIET} -b "$module"
-    udevsettle
+    /sbin/udevadm settle
 
-    for loopdev in $pattern; do
-        if [ "$(cat $loopdev/size)" -eq 0 ]; then
-            dev=$(sys2dev "${loopdev}")
+    if [ "$module" = loop ]; then
+        if [ ! -e /dev/loop0 ]; then
+            # temporary workaround for kernel bug
+            for i in 0 1 2 3 4 5 6 7; do
+                mknod "/dev/loop$i" b 7 "$i" || true
+            done
+        fi
+
+        dev="$(losetup -f)"
+        if [ "$dev" ]; then
             if [ -n "$offset" ]; then
                 losetup -o "$offset" "$dev" "$fspath"
             else
@@ -139,22 +134,24 @@ setup_loop() {
             fi
             echo "$dev"
             return 0
+        else
+            panic "No loop devices available"
         fi
-    done
-    panic "No loop devices available"
-}
-
-remove_loop() {
-    local fspath=$1
-
-    for loopdev in "/dev/loop"*; do
-    	loop_fspath=$(losetup ${loopdev} | awk '{print $3}' | tr -d '()')
-	if [ "${loop_fspath}" = "${fspath}" ]; then
-	    losetup -d "${loopdev}"
-	    return 0
-	fi
-    done
-    return 1
+    else
+        for loopdev in $pattern; do
+            if [ "$(cat $loopdev/size)" -eq 0 ]; then
+                dev=$(sys2dev "${loopdev}")
+                if [ -n "$offset" ]; then
+                    losetup -o "$offset" "$dev" "$fspath"
+                else
+                    losetup "$dev" "$fspath"
+                fi
+                echo "$dev"
+                return 0
+            fi
+        done
+        panic "No loop devices available"
+    fi
 }
 
 try_mount ()
@@ -173,15 +170,14 @@ try_mount ()
 
 find_cow_device() {
     pers_label="${1}"
+    cow_backing="/${pers_label}-backing"
     for sysblock in $(echo /sys/block/* | tr ' ' '\n' | grep -v loop); do
         for dev in $(subdevices "${sysblock}"); do
             devname=$(sys2dev "${dev}")
             if [ "$(/lib/udev/vol_id -l $devname 2>/dev/null)" = "${pers_label}" ]; then
                 echo "$devname"
                 return
-            elif is_supported_blockdev ${devname}; then
-		devbasename=$(basename "${devname}")
-		cow_backing="${rootmnt}/media/${devbasename}"
+            elif [ "$(get_fstype ${devname})" = "vfat" ]; then # FIXME: all supported block devices should be scanned
                 mkdir -p "${cow_backing}"
                 try_mount "${devname}" "${cow_backing}" "rw"
                 if [ -e "${cow_backing}/${pers_label}" ]; then
@@ -189,7 +185,6 @@ find_cow_device() {
                     return 0
                 else
                     umount ${cow_backing}
-		    rmdir ${cow_backing}
                 fi
             fi
         done
