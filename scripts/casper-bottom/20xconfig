@@ -44,6 +44,11 @@ for x in $(cat /proc/cmdline); do
 	esac
 done
 
+# if already configured, skip X configuration
+if  [ -f /etc/X11/xorg.conf ]; then
+    exit 0
+fi
+
 log_begin_msg "$DESCRIPTION"
 
 mount -n -o bind /sys /root/sys
