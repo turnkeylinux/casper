@@ -21,6 +21,11 @@ esac
 
 log_begin_msg "$DESCRIPTION"
 
+# if swap already configured skip configuration
+if grep -q '\bswap\b' $FSTAB; then
+    exit 0
+fi
+
 devices=""
 for device in /dev/[hs]d[a-z][0-9]*; do
     if ! [ -b "$device" ]; then
