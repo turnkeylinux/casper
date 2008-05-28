@@ -3,6 +3,7 @@ bin/casper-login        sbin
 bin/casper-snapshot     sbin
 bin/casper-preseed      usr/share/casper
 bin/casper-reconfigure  usr/share/casper
+bin/livestate           usr/bin
 hooks                   usr/share/initramfs-tools
 scripts                 usr/share/initramfs-tools
 

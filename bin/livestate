@@ -1,0 +1,102 @@
+#!/usr/bin/python
+"""
+Display/Test live system state
+
+By default, the following information will be displayed:
+    bootmedia:  media system booted from, eg. cdr | usb
+    filesystem: live filesystem running from, eg. ram | bootmedia
+
+Arguments:
+    bootmedia[=cdr|usb]
+    filesystem[=ram|bootmedia]
+
+    If test is provided, exitcode will be 0 or 1
+
+Examples:
+    $ livestate
+    bootmedia:  cdr
+    filesystem: ram
+
+    $ livestate filesystem
+    ram
+
+    $ livestate filesystem=ram; echo $?
+    0
+"""
+
+import sys
+from os.path import *
+
+LIVEMOUNT="/media/live"
+
+def fatal(s):
+    print >> sys.stderr, "error: " + str(s)
+    sys.exit(2)
+
+def usage():
+    print "Syntax: %s [test[=result]]" % sys.argv[0]
+    print __doc__.strip()
+    sys.exit(2)
+
+def toram():
+    mounts = file("/proc/mounts").read()
+    if mounts.find("/dev/shm %s tmpfs rw" % LIVEMOUNT) != -1:
+        return True
+    return False
+
+def get_filesystem():
+    if toram():
+        return "ram"
+    else:
+        return "bootmedia"
+
+def get_bootmedia():
+    if exists(join(LIVEMOUNT, 'isolinux/isolinux.cfg')):
+        return 'cdr'
+
+    if exists(join(LIVEMOUNT, 'syslinux.cfg')):
+        return 'usb'
+
+    fatal('could not determine bootmedia')
+
+def check_state(state):
+    checks = {'bootmedia': get_bootmedia(),
+              'filesystem': get_filesystem()}
+
+    try:
+        check, result = state.split('=')
+    except:
+        check = state
+        result = None
+
+    if check not in checks.keys():
+        fatal('state check not found: %s' % check)
+
+    if result is None:
+        print checks[check]
+        return True
+
+    if checks[check] == result:
+        return True
+
+    return False
+
+def main():
+    if not exists(LIVEMOUNT):
+        fatal('livemount does not exist: %s' % LIVEMOUNT)
+
+    if '-h' in sys.argv:
+        usage()
+
+    if len(sys.argv) == 2:
+        if check_state(sys.argv[1]):
+            sys.exit(0)
+
+        sys.exit(1)
+
+    print "bootmedia:  %s" % get_bootmedia()
+    print "filesystem: %s" % get_filesystem()
+
+if __name__ == "__main__":
+    main()
+
