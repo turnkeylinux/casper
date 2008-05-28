@@ -8,7 +8,7 @@ set -e
 case "$1" in
   start)
     log_begin_msg "Starting $NAME"
-    if grep -q "/dev/shm /media/live tmpfs rw" /proc/mounts; then
+    if livestate bootmedia=cdr && livestate filesystem=ram; then
         eject &
     fi
     log_action_end_msg $?
