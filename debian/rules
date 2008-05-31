@@ -10,7 +10,7 @@ build:
 	set -e; \
 	for x in bin/* scripts/casper scripts/casper-bottom/* \
 	         ubiquity-hooks/*; do \
-		sh -n $$x; \
+		(sed -n 1p $$x | grep -q /bin/sh) && sh -n $$x; \
 	done
 
 clean:
