@@ -33,7 +33,7 @@ VERSION=0.0.1
 if [ -e /etc/casper.conf ]; then
 	. /etc/casper.conf
 else
-	USERNAME=$(cat /etc/passwd | grep "999" | cut -f1 -d ':')
+	USERNAME=user
 	HOSTNAME=$(hostname)
 	BUILD_SYSTEM="Debian"
 fi
