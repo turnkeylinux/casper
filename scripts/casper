@@ -26,8 +26,8 @@ parse_cmdline() {
         case $x in
             toram=*)
                 export TORAM=${x#toram=} ;;
-            ecto)
-                export ECTO="Yes" ;;
+            noecto)
+                export NOECTO="Yes" ;;
             showmounts)
                 export SHOWMOUNTS="Yes" ;;
         esac
@@ -361,7 +361,7 @@ setup_aufs() {
     mount tmpfs -t tmpfs -o rw,noatime,mode=755 /cow || panic "Can not mount tmpfs on /cow"
     mount -t aufs -o noatime,dirs=/cow=rw:$rofsstring aufs "$rootmnt" || panic "aufs mount failed"
 
-    if [ -n "${ECTO}" ] && [ -e /scripts/ecto ]; then
+    if [ ! "${NOECTO}" ] && [ -e /scripts/ecto ]; then
         log_begin_msg "Ectoplasm related tasks"
         . /scripts/ecto
         log_end_msg
