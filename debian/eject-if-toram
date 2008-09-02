@@ -5,6 +5,9 @@ NAME=eject-if-toram
 set -e
 . /lib/lsb/init-functions
 
+#Exit if system was not booted by casper
+grep -qs boot=casper /proc/cmdline || exit 0
+
 case "$1" in
   start)
     log_begin_msg "Starting $NAME"
