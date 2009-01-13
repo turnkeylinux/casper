@@ -1,102 +1,98 @@
-#!/usr/bin/python
-"""
-Display/Test live system state
-
-By default, the following information will be displayed:
-    bootmedia:  media system booted from, eg. cdr | usb
-    rootfs: live root filesystem running from, eg. ram | bootmedia
-
-Arguments:
-    bootmedia[=cdr|usb]
-    rootfs[=ram|bootmedia]
-
-    If test is provided, exitcode will be 0 or 1
-
-Examples:
-    $ livestate
-    bootmedia:  cdr
-    rootfs: ram
-
-    $ livestate rootfs
-    ram
-
-    $ livestate rootfs=ram; echo $?
-    0
-"""
-
-import sys
-from os.path import *
+#!/bin/sh
+# Display/Test live system state
+# 
+# By default, the following information will be displayed:
+#     bootmedia:  media system booted from, eg. cdr | usb
+#     rootfs: live root filesystem running from, eg. ram | bootmedia
+# 
+# Arguments:
+#     bootmedia[=cdr|usb]
+#     rootfs[=ram|bootmedia]
+# 
+#     If test is provided, exitcode will be 0 or 1
+# 
+# Examples:
+#     $ livestate
+#     bootmedia:  cdr
+#     rootfs: ram
+# 
+#     $ livestate rootfs
+#     ram
+# 
+#     $ livestate rootfs=ram; echo $?
+#     0
 
 LIVEMOUNT="/media/live"
 
-def fatal(s):
-    print >> sys.stderr, "error: " + str(s)
-    sys.exit(2)
+fatal() {
+    echo error: $@ 1>&2
+    exit 1
+}
 
-def usage():
-    print "Syntax: %s [test[=result]]" % sys.argv[0]
-    print __doc__.strip()
-    sys.exit(2)
+usage() {
+    echo "Syntax: $0 [test[=result]]"
+    sed -n '1d; s/^# //p' $0
+    exit 2
+}
 
-def toram():
-    mounts = file("/proc/mounts").read()
-    if mounts.find("/dev/shm %s tmpfs rw" % LIVEMOUNT) != -1:
-        return True
-    return False
+get_bootmedia() {
+    if [ -e "$LIVEMOUNT/isolinux/isolinux.cfg" ]; then
+        echo cdr
+    elif [ -e "$LIVEMOUNT/syslinux.cfg" ]; then
+        echo usb
+    else
+        fatal "could not determine bootmedia"
+    fi
+}
 
-def get_rootfs():
-    if toram():
-        return "ram"
-    else:
-        return "bootmedia"
+get_rootfs() {
+    if grep -q "/dev/shm $LIVEMOUNT tmpfs rw" /proc/mounts; then
+        echo ram
+    else
+        echo bootmedia
+    fi
+}
 
-def get_bootmedia():
-    if exists(join(LIVEMOUNT, 'isolinux/isolinux.cfg')):
-        return 'cdr'
+check_state() {
+    state=$1
 
-    if exists(join(LIVEMOUNT, 'syslinux.cfg')):
-        return 'usb'
+    check=${state%=*}
 
-    fatal('could not determine bootmedia')
+    if [ "$check" = "bootmedia" ]; then
+        value=$(get_bootmedia)
+    elif [ "$check" = "rootfs" ]; then
+        value=$(get_rootfs)
+    else
+        fatal "state check not found: $check"
+    fi
 
-def check_state(state):
-    checks = {'bootmedia': get_bootmedia(),
-              'rootfs': get_rootfs()}
+    # only one argument
+    if [ "$check" = "$state" ]; then
+        echo $value
+        return 0
+    else
+        result=${state#*=}
+        if [ "$result" = "$value" ]; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+}
 
-    try:
-        check, result = state.split('=')
-    except:
-        check = state
-        result = None
+[ -e $LIVEMOUNT ] || fatal "livemount does not exist: $LIVEMOUNT"
 
-    if check not in checks.keys():
-        fatal('state check not found: %s' % check)
+[ "$1" = "-h" ] && usage
 
-    if result is None:
-        print checks[check]
-        return True
-
-    if checks[check] == result:
-        return True
-
-    return False
-
-def main():
-    if not exists(LIVEMOUNT):
-        fatal('livemount does not exist: %s' % LIVEMOUNT)
-
-    if '-h' in sys.argv:
-        usage()
-
-    if len(sys.argv) == 2:
-        if check_state(sys.argv[1]):
-            sys.exit(0)
-
-        sys.exit(1)
-
-    print "bootmedia:  %s" % get_bootmedia()
-    print "rootfs: %s" % get_rootfs()
-
-if __name__ == "__main__":
-    main()
-
+if [ $# = 0 ]; then
+    echo bootmedia: $(get_bootmedia)
+    echo rootfs: $(get_rootfs)
+elif [ $# = 1 ]; then
+    if check_state $1; then
+        exit 0
+    else
+        exit 1
+    fi
+else
+    usage
+fi
