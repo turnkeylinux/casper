@@ -1,0 +1,55 @@
+#!/bin/sh
+# Fix for LP#150188
+
+PREREQ=""
+DESCRIPTION="Possibly disabling update-initramfs (useless on a live CD)..."
+
+prereqs()
+{
+       echo "$PREREQ"
+}
+
+case $1 in
+# get pre-requisites
+prereqs)
+       prereqs
+       exit 0
+       ;;
+esac
+
+. /scripts/casper-functions
+
+log_begin_msg "$DESCRIPTION"
+
+chroot /root dpkg-divert --add --rename --quiet \
+        /usr/sbin/update-initramfs
+# Running off a USB disk or other writable media.
+if [ -w /root/cdrom ] && \
+   # rw is guaranteed to be first.
+   grep -q ' /root/cdrom rw[, ]' /proc/self/mountinfo; then
+	cat > /root/usr/sbin/update-initramfs <<'EOF'
+#! /bin/sh
+set -e
+update-initramfs.distrib "$@"
+if [ -e /cdrom/casper/initrd.lz ]; then
+    zcat /initrd.img | lzma -9c >/cdrom/casper/initrd.lz.new
+    mv /cdrom/casper/initrd.lz.new /cdrom/casper/initrd.lz
+else
+    cp /initrd.img /cdrom/casper/initrd.gz.new
+    mv /cdrom/casper/initrd.gz.new /cdrom/casper/initrd.gz
+fi
+cp /vmlinuz /cdrom/casper/vmlinuz.new
+mv /cdrom/casper/vmlinuz.new /cdrom/casper/vmlinuz
+exit 0
+EOF
+else
+	cat > /root/usr/sbin/update-initramfs <<EOF
+#! /bin/sh
+echo "update-initramfs is disabled since running on read-only media"
+exit 0
+EOF
+fi
+
+chmod 755 /root/usr/sbin/update-initramfs
+
+log_end_msg
