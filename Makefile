@@ -6,8 +6,7 @@ all:
 	sed -i -e 's/\(BUILD_SYSTEM="\).*"/\1'$(BUILD_SYSTEM)'"/g' casper.conf
 
 	set -e; \
-	for x in bin/* scripts/casper scripts/casper-bottom/* \
-	         ubiquity-hooks/*; do \
+	for x in bin/* scripts/casper scripts/casper-bottom/*; do \
 		sh -n $$x; \
 	done
 

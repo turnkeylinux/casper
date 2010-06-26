@@ -16,14 +16,3 @@ Breaks: genext2fs (<< 1.4.1)
 Tag: admin::boot, admin::filesystem, implemented-in::shell, protocol::smb, role::plugin, scope::utility, special::completely-tagged, works-with-format::iso9660
 Description: Run a "live" preinstalled system from read-only media
 
-Package: ubiquity-casper
-Architecture: all
-Depends: laptop-detect, sudo, ${misc:Depends}
-Conflicts: espresso-casper
-Replaces: espresso-casper
-Enhances: ubiquity
-Tag: admin::boot, admin::filesystem, implemented-in::shell, protocol::smb, role::plugin, scope::utility, special::completely-tagged, works-with-format::iso9660
-Description: Configuration hooks for live installer
- This package provides hook scripts for the Ubiquity live installer that
- repeat some pieces of configuration done by the live system boot process in
- the system installed by Ubiquity.
