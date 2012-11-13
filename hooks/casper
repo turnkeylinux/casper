@@ -41,7 +41,6 @@ CDROM_RULES=/lib/udev/rules.d/60-cdrom_id.rules
 [ -e ${CDROM_RULES} ] && cp -p ${CDROM_RULES} ${DESTDIR}/lib/udev/rules.d/
 
 copy_exec /lib/udev/cdrom_id /lib/udev
-copy_exec /lib/udev/path_id /lib/udev
 
 # cifs boot
 if [ -x /sbin/mount.cifs ]; then
