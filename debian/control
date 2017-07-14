@@ -3,7 +3,7 @@ Section: misc
 Priority: optional
 Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends:
- debhelper,
+ debhelper (>= 10),
 Standards-Version: 4.0.0
 Vcs-Bzr: lp:ubuntu/casper
 
