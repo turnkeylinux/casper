@@ -8,7 +8,6 @@ Standards-Version: 4.0.0
 
 Package: casper
 Architecture: any
-Section: misc
 Priority: extra
 Depends:
  busybox-initramfs,
