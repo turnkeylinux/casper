@@ -14,7 +14,6 @@ Depends:
  busybox-initramfs,
  dmsetup,
  initramfs-tools,
- util-linux,
  uuid-runtime,
  ${misc:Depends},
  ${shlibs:Depends},
