@@ -2,7 +2,8 @@ Source: casper
 Section: misc
 Priority: optional
 Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
-Build-Depends: debhelper
+Build-Depends:
+ debhelper,
 Standards-Version: 3.8.4
 Vcs-Bzr: lp:ubuntu/casper
 
@@ -10,7 +11,13 @@ Package: casper
 Architecture: any
 Section: misc
 Priority: extra
-Depends: ${shlibs:Depends}, ${misc:Depends}, initramfs-tools, busybox-initramfs, dmsetup, uuid-runtime, util-linux
+Depends:
+ busybox-initramfs,
+ dmsetup,
+ initramfs-tools,
+ util-linux,
+ uuid-runtime,
+ ${misc:Depends},
+ ${shlibs:Depends},
 Tag: admin::boot, admin::filesystem, implemented-in::shell, protocol::smb, role::plugin, scope::utility, special::completely-tagged, works-with-format::iso9660
 Description: Run a "live" preinstalled system from read-only media
-
