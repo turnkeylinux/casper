@@ -1,7 +1,7 @@
 Source: casper
 Section: misc
 Priority: optional
-Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Maintainer: Liraz Siri <liraz@turnkeylinux.org>
 Build-Depends:
  debhelper (>= 10),
 Standards-Version: 4.0.0
