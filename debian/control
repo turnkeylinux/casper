@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends:
  debhelper,
-Standards-Version: 3.8.4
+Standards-Version: 4.0.0
 Vcs-Bzr: lp:ubuntu/casper
 
 Package: casper
