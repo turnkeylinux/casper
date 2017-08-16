@@ -46,7 +46,7 @@ Configure the running locale as specified, if not present the live-media rootfs 
 This tells casper to perform a network mount. The parameter "nfsroot=" (with optional "nfsopts="), should specify where is the location of the root filesystem.  With no args, will try cifs first, and if it fails nfs.
 .TP
 .B persistent
-Casper will look for persistent and snapshot partitions or files labeled "casper-rw", "home-rw", and files called "casper-sn*", "home-sn*" and will try to, in order: mount as /cow the first, mount the second in /home, and just copy the contents of the latter in appropriate locations (snapshots). Snapshots will be tried to be updated on reboot/shutdown. Look at casper-snapshot(1) for more informations.
+Casper will look for persistent and snapshot partitions or files labeled "casper-rw", "home-rw", and files called "casper-sn*", "home-sn*" and will try to, in order: mount as /cow the first, mount the second in /home, and just copy the contents of the latter in appropriate locations (snapshots). Snapshots will be tried to be updated on reboot/shutdown. Look at casper-snapshot(1) for more information.
 .TP
 .B nopersistent
 disables the above mentioned "persistent" feature, useful if the bootloader (like syslinux) has been installed with persistent enabled.
