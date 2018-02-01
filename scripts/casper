@@ -59,7 +59,7 @@ parse_cmdline() {
         esac
     done
     if [ "${UNIONFS}" = "" ]; then
-        export UNIONFS="aufs"
+        export UNIONFS="overlay"
     fi
 }
 
@@ -363,7 +363,7 @@ setup_unionfs() {
     rootmnt="$2"
 
     case ${UNIONFS} in
-        aufs|unionfs)
+        overlay|aufs|unionfs)
             modprobe "${MP_QUIET}" -b ${UNIONFS} || true
             if ! cut -f2 /proc/filesystems | grep -q "^${UNIONFS}\$" && \
                [ -x /bin/unionfs-fuse ]; then
@@ -435,6 +435,14 @@ setup_unionfs() {
             (ulimit -n 16384; unionfs-fuse -o cow -o noinitgroups -o default_permissions -o allow_other -o use_ino -o suid /cow=RW:$rofsstring "$rootmnt" || panic "${UNIONFS} mount failed")
             mkdir -p /dev/.initramfs/varrun
             pidof unionfs-fuse >> /dev/.initramfs/varrun/sendsigs.omit || true
+            ;;
+        overlay)
+            mkdir /cow/.work /cow/.root
+            if [ -d /20sandbox.squashfs ]; then
+                mount -t ${UNIONFS} -o noatime,upperdir=/cow/.root,workdir=/cow/.work,lowerdir=/10root.squashfs:/20sandbox.squashfs ${UNIONFS} "$rootmnt"
+            else
+                mount -t ${UNIONFS} -o noatime,upperdir=/cow/.root,workdir=/cow/.work,lowerdir=/10root.squashfs ${UNIONFS} "$rootmnt"
+            fi
             ;;
         *)
             mount -t ${UNIONFS} -o noatime,dirs=/cow=rw:$rofsstring ${UNIONFS} "$rootmnt" || panic "${UNIONFS} mount failed"
