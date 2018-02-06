@@ -20,6 +20,7 @@ esac
 
 manual_add_modules unionfs
 manual_add_modules aufs
+manual_add_modules overlay
 
 # unionfs-fuse, if available
 if [ -x /usr/bin/unionfs-fuse ]; then
